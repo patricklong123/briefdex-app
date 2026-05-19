@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx --yes create-expo-app@latest . --template blank-typescript --no-install)",
+      "Bash(npm --version)",
+      "Read(//opt/homebrew/**)",
+      "Read(//usr/local/**)",
+      "Read(//Users/patricklong/.nvm/versions/**)",
+      "Read(//Users/patricklong/.volta/**)",
+      "Read(//Users/patricklong/**)",
+      "Bash(brew list:*)",
+      "Bash(ls /Users/patricklong/Desktop/briefdex-app/src/**/*)",
+      "Bash(npm install:*)",
+      "Bash(ls /Users/patricklong/Desktop/briefdex-app/node_modules/@expo-google-fonts/dm-sans/*.ttf)",
+      "Bash(ls /Users/patricklong/Desktop/briefdex-app/node_modules/@expo-google-fonts/playfair-display/*.ttf)",
+      "Bash(npx tsc:*)",
+      "Bash(xcode-select -p)",
+      "Bash(xcrun simctl:*)"
+    ]
+  }
+}
