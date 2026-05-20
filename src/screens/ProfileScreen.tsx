@@ -23,9 +23,15 @@ interface Props {
   onOpenHome: () => void;
   onOpenPlayer: () => void;
   onOpenNotifications: () => void;
+  onOpenSubscription: () => void;
 }
 
-export function ProfileScreen({ onOpenHome, onOpenPlayer, onOpenNotifications }: Props) {
+export function ProfileScreen({
+  onOpenHome,
+  onOpenPlayer,
+  onOpenNotifications,
+  onOpenSubscription,
+}: Props) {
   const { user, resetAll } = useApp();
   const player = useAudioPlayer();
   const stats = useStats();
@@ -115,6 +121,7 @@ export function ProfileScreen({ onOpenHome, onOpenPlayer, onOpenNotifications }:
               icon={<CardIcon />}
               label="Subscription"
               subtitle={`Premium · Renews ${user.renewsOn}`}
+              onPress={onOpenSubscription}
             />
             <MenuItem
               icon={<GearIcon />}
