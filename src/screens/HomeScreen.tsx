@@ -8,6 +8,7 @@ import { BottomNav } from '../components/BottomNav';
 import { ChannelKey, colors, fonts, radii, spacing } from '../theme/tokens';
 import { CHANNELS } from '../data/placeholders';
 import { useAudioPlayer } from '../hooks/useAudioPlayer';
+import { useChannelProgress } from '../hooks/useChannelProgress';
 import { useApp } from '../contexts/AppContext';
 import { formatLongDate, greetingForHour } from '../utils/date';
 import { fetchLatestEpisode } from '../services/episodeService';
@@ -27,6 +28,9 @@ export function HomeScreen({ onOpenPlayer, onOpenProfile }: Props) {
 
   const [episode, setEpisode] = useState<Episode | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [channelDates, setChannelDates] = useState<Record<string, string | undefined>>({});
+
+  const heroProgress = useChannelProgress('daily-wrap', episode?.dateKey);
 
   useEffect(() => {
     let cancelled = false;
@@ -35,12 +39,27 @@ export function HomeScreen({ onOpenPlayer, onOpenProfile }: Props) {
       .then((ep) => {
         if (cancelled) return;
         setEpisode(ep);
+        setChannelDates((d) => ({ ...d, 'daily-wrap': ep.dateKey }));
         audioService.load(ep);
       })
       .catch((err: Error) => {
         if (cancelled) return;
         setError(err.message);
       });
+
+    // Fetch dates for the other channels in parallel so each tile can key
+    // its progress lookup. Audio for these is loaded by PlayerScreen on tap.
+    CHANNELS.forEach((c) => {
+      fetchLatestEpisode(c.id)
+        .then((ep) => {
+          if (cancelled) return;
+          setChannelDates((d) => ({ ...d, [c.id]: ep.dateKey }));
+        })
+        .catch(() => {
+          // Date-only lookup — silent failure; tile stays in "New" state.
+        });
+    });
+
     return () => {
       cancelled = true;
     };
@@ -62,10 +81,20 @@ export function HomeScreen({ onOpenPlayer, onOpenProfile }: Props) {
     fetchLatestEpisode('daily-wrap')
       .then((ep) => {
         setEpisode(ep);
+        setChannelDates((d) => ({ ...d, 'daily-wrap': ep.dateKey }));
         audioService.load(ep);
       })
       .catch((err: Error) => setError(err.message));
   };
+
+  // Prefer the live player position when the daily-wrap episode is loaded
+  // in audioService — keeps the hero scrubbing in real time even between
+  // the 5-second progressService saves.
+  const heroIsLoaded = player.episode?.id === episode?.id;
+  const heroPositionSec = heroIsLoaded ? player.positionSec : heroProgress.positionSeconds;
+  const heroDurationSec = heroIsLoaded
+    ? player.durationSec || (episode?.duration ?? 0)
+    : heroProgress.durationSeconds || (episode?.duration ?? 0);
 
   return (
     <ScreenBackground>
@@ -86,7 +115,9 @@ export function HomeScreen({ onOpenPlayer, onOpenProfile }: Props) {
           {episode ? (
             <HeroCard
               episode={episode}
-              positionSec={player.positionSec}
+              positionSec={heroPositionSec}
+              durationSec={heroDurationSec}
+              complete={heroProgress.complete}
               onPressPlay={handlePlayPress}
             />
           ) : error ? (
@@ -116,6 +147,7 @@ export function HomeScreen({ onOpenPlayer, onOpenProfile }: Props) {
               <View key={c.id} style={styles.gridCell}>
                 <ChannelTile
                   channel={c}
+                  episodeDate={channelDates[c.id]}
                   onPress={(channel: Channel) => onOpenPlayer(channel.id as ChannelKey)}
                 />
               </View>

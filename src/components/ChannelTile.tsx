@@ -3,9 +3,12 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { colors, fonts, radii } from '../theme/tokens';
 import { Channel } from '../types';
+import { useChannelProgress } from '../hooks/useChannelProgress';
 
 interface Props {
   channel: Channel;
+  /** Latest episode date (YYYY-MM-DD) for this channel. Undefined while loading. */
+  episodeDate?: string;
   onPress?: (channel: Channel) => void;
 }
 
@@ -29,16 +32,23 @@ const ACCENTS: Record<string, { angle: { start: { x: number; y: number }; end: {
   },
 };
 
-export function ChannelTile({ channel, onPress }: Props) {
+export function ChannelTile({ channel, episodeDate, onPress }: Props) {
   const accent = ACCENTS[channel.id] ?? ACCENTS['nz-markets'];
-  const progress = channel.progress ?? 0;
-  const isDone = channel.done;
-  const isNew = !progress && !isDone;
+  const progress = useChannelProgress(channel.id, episodeDate);
+  const isDone = progress.complete;
+  const percent = isDone ? 1 : progress.percentComplete;
+  const hasProgress = !isDone && percent > 0;
 
   let progressLabel: { text: string; color: string };
-  if (isDone) progressLabel = { text: '✓ Done', color: colors.g200 };
-  else if (progress > 0) progressLabel = { text: `${Math.round((1 - progress) * 5)}m left`, color: colors.gold };
-  else progressLabel = { text: 'New', color: colors.textFaint };
+  if (isDone) {
+    progressLabel = { text: '✓ Done', color: colors.g200 };
+  } else if (hasProgress) {
+    const remainingSec = Math.max(0, progress.durationSeconds - progress.positionSeconds);
+    const remainingMin = Math.max(1, Math.ceil(remainingSec / 60));
+    progressLabel = { text: `${remainingMin}m left`, color: colors.gold };
+  } else {
+    progressLabel = { text: 'New', color: colors.textFaint };
+  }
 
   return (
     <Pressable
@@ -83,7 +93,7 @@ export function ChannelTile({ channel, onPress }: Props) {
             style={[
               styles.progressFill,
               {
-                width: `${(isDone ? 1 : progress) * 100}%`,
+                width: `${percent * 100}%`,
                 backgroundColor: isDone ? colors.g500 : colors.gold,
               },
             ]}

@@ -10,6 +10,8 @@ import { PulsingDot } from './PulsingDot';
 interface Props {
   episode: Episode;
   positionSec: number;
+  durationSec: number;
+  complete: boolean;
   onPressPlay: () => void;
 }
 
@@ -19,9 +21,16 @@ function fmt(s: number) {
   return `${m}:${sec.toString().padStart(2, '0')}`;
 }
 
-export function HeroCard({ episode, positionSec, onPressPlay }: Props) {
-  const progress = episode.duration ? positionSec / episode.duration : 0;
+export function HeroCard({ episode, positionSec, durationSec, complete, onPressPlay }: Props) {
+  const totalSec = durationSec || episode.duration;
+  const rawProgress = totalSec ? positionSec / totalSec : 0;
+  const progress = complete ? 1 : Math.min(1, rawProgress);
+  const hasProgress = !complete && positionSec > 0;
   const durationLabel = `${Math.max(1, Math.round(episode.duration / 60))} min`;
+  let actionLabel: string;
+  if (complete) actionLabel = 'Listen again';
+  else if (hasProgress) actionLabel = 'Continue listening';
+  else actionLabel = "Play today's briefing";
   const handlePlay = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
     onPressPlay();
@@ -74,7 +83,7 @@ export function HeroCard({ episode, positionSec, onPressPlay }: Props) {
             <View style={styles.playTriangle} />
           </Pressable>
           <View style={{ flex: 1 }}>
-            <Text style={styles.continueLabel}>Continue listening</Text>
+            <Text style={styles.continueLabel}>{actionLabel}</Text>
             <Text style={styles.ticker}>{episode.tickerData}</Text>
           </View>
         </View>
@@ -82,9 +91,11 @@ export function HeroCard({ episode, positionSec, onPressPlay }: Props) {
         {/* Progress */}
         <ProgressBar progress={progress} height={3} style={{ marginTop: spacing.lg }} />
         <View style={styles.progressLabels}>
-          <Text style={styles.nowPlaying}>▸ NOW PLAYING</Text>
+          <Text style={styles.nowPlaying}>
+            {complete ? '✓ COMPLETED' : hasProgress ? '▸ IN PROGRESS' : '▸ NEW EPISODE'}
+          </Text>
           <Text style={styles.timer}>
-            {fmt(positionSec)} / {fmt(episode.duration)}
+            {fmt(complete ? totalSec : positionSec)} / {fmt(totalSec || episode.duration)}
           </Text>
         </View>
       </LinearGradient>

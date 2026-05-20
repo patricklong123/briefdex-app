@@ -25,6 +25,7 @@ function mapEpisode(api: ApiEpisode): Episode {
     title: cleanTitle(api.title),
     subtitle: 'Markets before your first coffee.',
     date: new Date(api.publishedAt),
+    dateKey: api.date,
     duration: api.durationSeconds,
     channel: api.channel,
     audioUrl: api.audioUrl,

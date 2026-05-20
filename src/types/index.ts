@@ -7,9 +7,6 @@ export interface Channel {
   category: ChannelCategory;
   duration: string;
   description: string;
-  /** progress 0..1, undefined = new */
-  progress?: number;
-  done?: boolean;
 }
 
 export interface Episode {
@@ -17,6 +14,8 @@ export interface Episode {
   title: string;
   subtitle: string;
   date: Date;
+  /** Calendar date used as the progress key (YYYY-MM-DD, as returned by the API). */
+  dateKey: string;
   duration: number; // seconds
   channel: string;
   audioUrl: string;

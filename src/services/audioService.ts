@@ -1,6 +1,9 @@
 import { Audio, AVPlaybackStatus, InterruptionModeIOS, InterruptionModeAndroid } from 'expo-av';
 import { Episode, PlaybackRate } from '../types';
 import { storage } from './storageService';
+import { progressService } from './progressService';
+
+const PROGRESS_SAVE_INTERVAL_SEC = 5;
 
 type Listener = (state: {
   episode: Episode | null;
@@ -19,6 +22,7 @@ class AudioService {
   private rate: PlaybackRate = 1.0;
   private listeners = new Set<Listener>();
   private configured = false;
+  private lastProgressSavePosSec = Number.NEGATIVE_INFINITY;
 
   async configure() {
     if (this.configured) return;
@@ -63,6 +67,7 @@ class AudioService {
     this.episode = episode;
     this.positionSec = await storage.getPlaybackPosition(episode.id);
     this.durationSec = episode.duration;
+    this.lastProgressSavePosSec = Number.NEGATIVE_INFINITY;
     this.emit();
 
     if (!episode.audioUrl) {
@@ -86,9 +91,30 @@ class AudioService {
     this.isPlaying = status.isPlaying;
     this.positionSec = status.positionMillis / 1000;
     this.durationSec = (status.durationMillis ?? this.episode?.duration ?? 0) / 1000;
-    if (this.episode) storage.setPlaybackPosition(this.episode.id, this.positionSec);
+    if (this.episode) {
+      storage.setPlaybackPosition(this.episode.id, this.positionSec);
+      if (status.didJustFinish) {
+        progressService.markComplete(this.episode.channel, this.episode.dateKey);
+      } else {
+        this.maybeSaveProgress();
+      }
+    }
     this.emit();
   };
+
+  private maybeSaveProgress() {
+    if (!this.episode) return;
+    if (Math.abs(this.positionSec - this.lastProgressSavePosSec) < PROGRESS_SAVE_INTERVAL_SEC) {
+      return;
+    }
+    this.lastProgressSavePosSec = this.positionSec;
+    progressService.saveProgress(
+      this.episode.channel,
+      this.episode.dateKey,
+      this.positionSec,
+      this.durationSec || this.episode.duration,
+    );
+  }
 
   private mockTimer: ReturnType<typeof setInterval> | null = null;
 
@@ -103,12 +129,21 @@ class AudioService {
       this.mockTimer = setInterval(() => {
         if (!this.isPlaying) return;
         this.positionSec += this.rate;
+        let finished = false;
         if (this.positionSec >= this.durationSec) {
           this.positionSec = this.durationSec;
           this.isPlaying = false;
+          finished = true;
           if (this.mockTimer) clearInterval(this.mockTimer);
         }
-        if (this.episode) storage.setPlaybackPosition(this.episode.id, this.positionSec);
+        if (this.episode) {
+          storage.setPlaybackPosition(this.episode.id, this.positionSec);
+          if (finished) {
+            progressService.markComplete(this.episode.channel, this.episode.dateKey);
+          } else {
+            this.maybeSaveProgress();
+          }
+        }
         this.emit();
       }, 1000);
     }
