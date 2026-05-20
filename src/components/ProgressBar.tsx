@@ -11,6 +11,8 @@ interface Props {
   /** show the glowing dot at the end of the filled portion */
   showDot?: boolean;
   trackColor?: string;
+  /** Render as a solid green completed bar (no dot, no gold gradient). */
+  complete?: boolean;
   style?: ViewStyle;
 }
 
@@ -19,9 +21,10 @@ export function ProgressBar({
   height = 3,
   showDot = true,
   trackColor = colors.line,
+  complete = false,
   style,
 }: Props) {
-  const clamped = Math.max(0, Math.min(1, progress));
+  const clamped = complete ? 1 : Math.max(0, Math.min(1, progress));
   const pct = `${clamped * 100}%` as const;
   const dotSize = Math.max(height + 5, 8);
 
@@ -33,16 +36,30 @@ export function ProgressBar({
         style,
       ]}
     >
-      <LinearGradient
-        colors={[colors.gold, colors.goldLight]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 0 }}
-        style={[
-          styles.fill,
-          { width: pct, height, borderRadius: height / 2 },
-        ]}
-      />
-      {showDot && clamped > 0 && clamped < 1 && (
+      {complete ? (
+        <View
+          style={[
+            styles.fill,
+            {
+              width: pct,
+              height,
+              borderRadius: height / 2,
+              backgroundColor: colors.g500,
+            },
+          ]}
+        />
+      ) : (
+        <LinearGradient
+          colors={[colors.gold, colors.goldLight]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 0 }}
+          style={[
+            styles.fill,
+            { width: pct, height, borderRadius: height / 2 },
+          ]}
+        />
+      )}
+      {showDot && !complete && clamped > 0 && clamped < 1 && (
         <View
           style={[
             styles.dot,

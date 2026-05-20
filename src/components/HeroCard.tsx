@@ -89,10 +89,20 @@ export function HeroCard({ episode, positionSec, durationSec, complete, onPressP
         </View>
 
         {/* Progress */}
-        <ProgressBar progress={progress} height={3} style={{ marginTop: spacing.lg }} />
+        <ProgressBar
+          progress={progress}
+          complete={complete}
+          height={3}
+          style={{ marginTop: spacing.lg }}
+        />
         <View style={styles.progressLabels}>
-          <Text style={styles.nowPlaying}>
-            {complete ? '✓ COMPLETED' : hasProgress ? '▸ IN PROGRESS' : '▸ NEW EPISODE'}
+          <Text
+            style={[
+              styles.nowPlaying,
+              complete && { color: colors.g200 },
+            ]}
+          >
+            {complete ? '✓ Done' : hasProgress ? '▸ IN PROGRESS' : '▸ NEW EPISODE'}
           </Text>
           <Text style={styles.timer}>
             {fmt(complete ? totalSec : positionSec)} / {fmt(totalSec || episode.duration)}
