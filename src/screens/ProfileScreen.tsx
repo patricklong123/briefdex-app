@@ -7,6 +7,7 @@ import { ScreenBackground } from '../components/ScreenBackground';
 import { BottomNav } from '../components/BottomNav';
 import { useApp } from '../contexts/AppContext';
 import { useAudioPlayer } from '../hooks/useAudioPlayer';
+import { useStats } from '../hooks/useStats';
 import {
   BellIcon,
   CardIcon,
@@ -26,8 +27,12 @@ interface Props {
 export function ProfileScreen({ onOpenHome, onOpenPlayer }: Props) {
   const { user, resetAll } = useApp();
   const player = useAudioPlayer();
+  const stats = useStats();
   const initial = user.name.charAt(0);
-  const minutesSavedHrs = (user.stats.minutesSaved / 60).toFixed(1);
+  const minutesSavedLabel =
+    stats.minutesSaved >= 60
+      ? `${(stats.minutesSaved / 60).toFixed(1)} hrs`
+      : `${Math.round(stats.minutesSaved)} min`;
 
   return (
     <ScreenBackground>
@@ -79,17 +84,17 @@ export function ProfileScreen({ onOpenHome, onOpenPlayer }: Props) {
               <View style={styles.statsRow}>
                 <StatCard
                   icon={<FlameIcon />}
-                  value={String(user.stats.streak)}
+                  value={String(stats.streak)}
                   label="Day streak"
                 />
                 <StatCard
                   icon={<CheckIcon />}
-                  value={String(user.stats.briefingsCompleted)}
+                  value={String(stats.briefingsCompleted)}
                   label="Briefings completed"
                 />
                 <StatCard
                   icon={<ClockIcon />}
-                  value={`${minutesSavedHrs} hrs`}
+                  value={minutesSavedLabel}
                   label="Minutes saved"
                 />
               </View>

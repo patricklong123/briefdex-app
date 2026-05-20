@@ -1,4 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { statsService } from './statsService';
 
 export interface ProgressEntry {
   positionSeconds: number;
@@ -63,19 +64,19 @@ class ProgressService {
     const safePos = Math.max(0, positionSeconds);
     const safeDur = Math.max(0, durationSeconds);
     const percent = safeDur > 0 ? Math.min(1, safePos / safeDur) : 0;
-    const previouslyComplete = this.cache.get(mapKey(channel, date))?.complete ?? false;
+    const existing = await this.getProgress(channel, date);
     const entry: ProgressEntry = {
       positionSeconds: safePos,
       durationSeconds: safeDur,
       percentComplete: percent,
-      complete: previouslyComplete || percent >= COMPLETE_THRESHOLD,
+      complete: existing.complete || percent >= COMPLETE_THRESHOLD,
       updatedAt: Date.now(),
     };
     await this.persist(channel, date, entry);
   }
 
   async markComplete(channel: string, date: string): Promise<void> {
-    const existing = (await this.getProgress(channel, date)) ?? EMPTY_PROGRESS;
+    const existing = await this.getProgress(channel, date);
     const dur = existing.durationSeconds || existing.positionSeconds;
     const entry: ProgressEntry = {
       positionSeconds: dur,
@@ -105,9 +106,13 @@ class ProgressService {
 
   private async persist(channel: string, date: string, entry: ProgressEntry): Promise<void> {
     const k = mapKey(channel, date);
+    const wasComplete = this.cache.get(k)?.complete ?? false;
     this.cache.set(k, entry);
     this.listeners.get(k)?.forEach((l) => l(entry));
     await AsyncStorage.setItem(storageKey(channel, date), JSON.stringify(entry));
+    if (!wasComplete && entry.complete) {
+      statsService.recordCompletion(entry.durationSeconds);
+    }
   }
 }
 

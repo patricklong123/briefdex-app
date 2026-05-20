@@ -1,4 +1,5 @@
 import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
+import { statsService } from '../services/statsService';
 import { storage } from '../services/storageService';
 import { OnboardingAnswers, UserProfile } from '../types';
 
@@ -74,6 +75,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const resetAll = useCallback(async () => {
     await storage.reset();
+    await statsService.reset();
     setOnboardingComplete(false);
     setAnswersState({});
     setUserState(DEFAULT_USER);
