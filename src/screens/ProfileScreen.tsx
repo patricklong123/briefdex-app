@@ -24,6 +24,7 @@ interface Props {
   onOpenPlayer: () => void;
   onOpenNotifications: () => void;
   onOpenSubscription: () => void;
+  onOpenSettings: () => void;
 }
 
 export function ProfileScreen({
@@ -31,6 +32,7 @@ export function ProfileScreen({
   onOpenPlayer,
   onOpenNotifications,
   onOpenSubscription,
+  onOpenSettings,
 }: Props) {
   const { user, resetAll } = useApp();
   const player = useAudioPlayer();
@@ -127,6 +129,7 @@ export function ProfileScreen({
               icon={<GearIcon />}
               label="Settings"
               subtitle="Playback, voice, privacy"
+              onPress={onOpenSettings}
             />
           </View>
 

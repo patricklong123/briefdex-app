@@ -2,6 +2,7 @@ import { Audio, AVPlaybackStatus, InterruptionModeIOS, InterruptionModeAndroid }
 import { Episode, PlaybackRate } from '../types';
 import { storage } from './storageService';
 import { progressService } from './progressService';
+import { preferencesService } from './preferencesService';
 
 const PROGRESS_SAVE_INTERVAL_SEC = 5;
 
@@ -23,6 +24,15 @@ class AudioService {
   private listeners = new Set<Listener>();
   private configured = false;
   private lastProgressSavePosSec = Number.NEGATIVE_INFINITY;
+  private defaultRate: PlaybackRate = 1.0;
+  private skipIntervalSec = 15;
+
+  constructor() {
+    preferencesService.subscribe((p) => {
+      this.defaultRate = p.playbackSpeed as PlaybackRate;
+      this.skipIntervalSec = p.skipInterval;
+    });
+  }
 
   async configure() {
     if (this.configured) return;
@@ -67,6 +77,7 @@ class AudioService {
     this.episode = episode;
     this.positionSec = await storage.getPlaybackPosition(episode.id);
     this.durationSec = episode.duration;
+    this.rate = this.defaultRate;
     this.lastProgressSavePosSec = Number.NEGATIVE_INFINITY;
     this.emit();
 
@@ -172,12 +183,12 @@ class AudioService {
     if (this.episode) storage.setPlaybackPosition(this.episode.id, clamped);
   }
 
-  async skipForward(seconds = 15) {
-    await this.seekTo(this.positionSec + seconds);
+  async skipForward(seconds?: number) {
+    await this.seekTo(this.positionSec + (seconds ?? this.skipIntervalSec));
   }
 
-  async skipBack(seconds = 15) {
-    await this.seekTo(this.positionSec - seconds);
+  async skipBack(seconds?: number) {
+    await this.seekTo(this.positionSec - (seconds ?? this.skipIntervalSec));
   }
 
   async setRate(rate: PlaybackRate) {

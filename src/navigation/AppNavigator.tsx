@@ -7,9 +7,10 @@ import { ProfileScreen } from '../screens/ProfileScreen';
 import { PlayerScreen } from '../screens/PlayerScreen';
 import { NotificationsScreen } from '../screens/NotificationsScreen';
 import { SubscriptionScreen } from '../screens/SubscriptionScreen';
+import { SettingsScreen } from '../screens/SettingsScreen';
 import { ChannelKey, colors } from '../theme/tokens';
 
-type Tab = 'home' | 'profile' | 'notifications' | 'subscription';
+type Tab = 'home' | 'profile' | 'notifications' | 'subscription' | 'settings';
 
 export function AppNavigator() {
   const { onboardingComplete, openPlayerOnStart, clearOpenPlayerOnStart } = useApp();
@@ -53,11 +54,14 @@ export function AppNavigator() {
           onOpenPlayer={() => openPlayer()}
           onOpenNotifications={() => setTab('notifications')}
           onOpenSubscription={() => setTab('subscription')}
+          onOpenSettings={() => setTab('settings')}
         />
       ) : tab === 'notifications' ? (
         <NotificationsScreen onBack={() => setTab('profile')} />
-      ) : (
+      ) : tab === 'subscription' ? (
         <SubscriptionScreen onBack={() => setTab('profile')} />
+      ) : (
+        <SettingsScreen onBack={() => setTab('profile')} />
       )}
 
       <Modal

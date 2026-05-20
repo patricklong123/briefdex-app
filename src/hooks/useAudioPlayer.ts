@@ -23,8 +23,8 @@ export function useAudioPlayer() {
     play: () => audioService.play(),
     pause: () => audioService.pause(),
     toggle: () => audioService.toggle(),
-    skipForward: () => audioService.skipForward(15),
-    skipBack: () => audioService.skipBack(15),
+    skipForward: () => audioService.skipForward(),
+    skipBack: () => audioService.skipBack(),
     seekTo: (sec: number) => audioService.seekTo(sec),
     cycleRate: () => audioService.cycleRate(),
   };
