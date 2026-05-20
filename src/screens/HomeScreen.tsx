@@ -87,14 +87,8 @@ export function HomeScreen({ onOpenPlayer, onOpenProfile }: Props) {
       .catch((err: Error) => setError(err.message));
   };
 
-  // Prefer the live player position when the daily-wrap episode is loaded
-  // in audioService — keeps the hero scrubbing in real time even between
-  // the 5-second progressService saves.
-  const heroIsLoaded = player.episode?.id === episode?.id;
-  const heroPositionSec = heroIsLoaded ? player.positionSec : heroProgress.positionSeconds;
-  const heroDurationSec = heroIsLoaded
-    ? player.durationSec || (episode?.duration ?? 0)
-    : heroProgress.durationSeconds || (episode?.duration ?? 0);
+  const heroPositionSec = heroProgress.positionSeconds;
+  const heroDurationSec = heroProgress.durationSeconds || (episode?.duration ?? 0);
 
   return (
     <ScreenBackground>
