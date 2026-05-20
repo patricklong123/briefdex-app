@@ -22,9 +22,10 @@ import {
 interface Props {
   onOpenHome: () => void;
   onOpenPlayer: () => void;
+  onOpenNotifications: () => void;
 }
 
-export function ProfileScreen({ onOpenHome, onOpenPlayer }: Props) {
+export function ProfileScreen({ onOpenHome, onOpenPlayer, onOpenNotifications }: Props) {
   const { user, resetAll } = useApp();
   const player = useAudioPlayer();
   const stats = useStats();
@@ -108,6 +109,7 @@ export function ProfileScreen({ onOpenHome, onOpenPlayer }: Props) {
               icon={<BellIcon />}
               label="Notifications"
               subtitle="Daily delivery time, alerts"
+              onPress={onOpenNotifications}
             />
             <MenuItem
               icon={<CardIcon />}
@@ -165,13 +167,18 @@ function MenuItem({
   icon,
   label,
   subtitle,
+  onPress,
 }: {
   icon: React.ReactNode;
   label: string;
   subtitle: string;
+  onPress?: () => void;
 }) {
   return (
-    <Pressable style={({ pressed }) => [styles.menuItem, pressed && { backgroundColor: 'rgba(255,255,255,0.04)' }]}>
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => [styles.menuItem, pressed && { backgroundColor: 'rgba(255,255,255,0.04)' }]}
+    >
       <View style={styles.menuIconBox}>{icon}</View>
       <View style={{ flex: 1 }}>
         <Text style={styles.menuLabel}>{label}</Text>

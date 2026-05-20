@@ -88,6 +88,12 @@ export const ChevronRightIcon = ({ size = 16, color = colors.textFaint }: IconPr
   </Svg>
 );
 
+export const ChevronLeftIcon = ({ size = 18, color = colors.white }: IconProps) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <Path d="M15 6l-6 6 6 6" stroke={color} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" />
+  </Svg>
+);
+
 export const LogoutIcon = ({ size = 18, color = colors.red }: IconProps) => (
   <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
     <Path
