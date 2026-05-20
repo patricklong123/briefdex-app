@@ -31,7 +31,7 @@ export function HomeScreen({ onOpenPlayer, onOpenProfile }: Props) {
   useEffect(() => {
     let cancelled = false;
     setError(null);
-    fetchLatestEpisode()
+    fetchLatestEpisode('daily-wrap')
       .then((ep) => {
         if (cancelled) return;
         setEpisode(ep);
@@ -59,7 +59,7 @@ export function HomeScreen({ onOpenPlayer, onOpenProfile }: Props) {
   const retry = () => {
     setEpisode(null);
     setError(null);
-    fetchLatestEpisode()
+    fetchLatestEpisode('daily-wrap')
       .then((ep) => {
         setEpisode(ep);
         audioService.load(ep);

@@ -46,10 +46,10 @@ export function PlayerScreen({ onClose, channelKey = 'daily-wrap' }: Props) {
   const loadedChannel = player.episode?.channel;
   const channelAlreadyLoaded = loadedChannel === theme.apiChannel;
 
-  // Daily Wrap is pre-loaded by HomeScreen, and we keep the previous fetch in
-  // place when a non-default channel is being resumed (e.g. via the bottom-nav
-  // "Now Playing" pill).
-  const needsFetch = channelKey !== 'daily-wrap' && !channelAlreadyLoaded;
+  // When reopening the player on the same channel (e.g. via the bottom-nav
+  // "Now Playing" pill), keep the existing playback state. Otherwise fetch
+  // the latest episode for this channel and start it.
+  const needsFetch = !channelAlreadyLoaded;
   const [isFetching, setIsFetching] = useState(needsFetch);
 
   useEffect(() => {
@@ -61,10 +61,12 @@ export function PlayerScreen({ onClose, channelKey = 'daily-wrap' }: Props) {
     setIsFetching(true);
     setFetchError(null);
     fetchLatestEpisode(theme.apiChannel)
-      .then((ep) => {
+      .then(async (ep) => {
         if (cancelled) return;
-        audioService.load(ep);
+        await audioService.load(ep);
+        if (cancelled) return;
         setIsFetching(false);
+        audioService.play();
       })
       .catch((e: Error) => {
         if (cancelled) return;
