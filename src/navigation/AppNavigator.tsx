@@ -7,10 +7,11 @@ import { ProfileScreen } from '../screens/ProfileScreen';
 import { PlayerScreen } from '../screens/PlayerScreen';
 import { NotificationsScreen } from '../screens/NotificationsScreen';
 import { SubscriptionScreen } from '../screens/SubscriptionScreen';
+import { AnnualPlanScreen } from '../screens/AnnualPlanScreen';
 import { SettingsScreen } from '../screens/SettingsScreen';
 import { ChannelKey, colors } from '../theme/tokens';
 
-type Tab = 'home' | 'profile' | 'notifications' | 'subscription' | 'settings';
+type Tab = 'home' | 'profile' | 'notifications' | 'subscription' | 'annual' | 'settings';
 
 export function AppNavigator() {
   const { onboardingComplete, openPlayerOnStart, clearOpenPlayerOnStart } = useApp();
@@ -59,7 +60,12 @@ export function AppNavigator() {
       ) : tab === 'notifications' ? (
         <NotificationsScreen onBack={() => setTab('profile')} />
       ) : tab === 'subscription' ? (
-        <SubscriptionScreen onBack={() => setTab('profile')} />
+        <SubscriptionScreen
+          onBack={() => setTab('profile')}
+          onOpenAnnual={() => setTab('annual')}
+        />
+      ) : tab === 'annual' ? (
+        <AnnualPlanScreen onBack={() => setTab('subscription')} />
       ) : (
         <SettingsScreen onBack={() => setTab('profile')} />
       )}

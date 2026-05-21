@@ -22,6 +22,7 @@ const APPLE_SUBSCRIPTIONS_URL = 'https://apps.apple.com/account/subscriptions';
 
 interface Props {
   onBack: () => void;
+  onOpenAnnual: () => void;
 }
 
 const MONTHS = [
@@ -78,7 +79,7 @@ function renewalDisplay(renewsOn: string | undefined): RenewalDisplay {
   };
 }
 
-export function SubscriptionScreen({ onBack }: Props) {
+export function SubscriptionScreen({ onBack, onOpenAnnual }: Props) {
   const { user } = useApp();
   const renewal = renewalDisplay(user.renewsOn);
   const [restoring, setRestoring] = useState(false);
@@ -173,7 +174,7 @@ export function SubscriptionScreen({ onBack }: Props) {
             <Text style={styles.annualMonthly}>That's just $14.17 per month</Text>
             <GoldButton
               label="Switch to Annual"
-              onPress={() => {}}
+              onPress={onOpenAnnual}
               style={{ marginTop: spacing.lg }}
             />
           </View>
