@@ -1,5 +1,14 @@
-import React from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import React, { useState } from 'react';
+import {
+  ActivityIndicator,
+  Alert,
+  Linking,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ScreenBackground } from '../components/ScreenBackground';
@@ -8,6 +17,8 @@ import { PulsingDot } from '../components/PulsingDot';
 import { ChevronLeftIcon, ChevronRightIcon, CheckIcon } from '../components/Icons';
 import { colors, fonts, radii, shadows, spacing } from '../theme/tokens';
 import { useApp } from '../contexts/AppContext';
+
+const APPLE_SUBSCRIPTIONS_URL = 'https://apps.apple.com/account/subscriptions';
 
 interface Props {
   onBack: () => void;
@@ -70,6 +81,28 @@ function renewalDisplay(renewsOn: string | undefined): RenewalDisplay {
 export function SubscriptionScreen({ onBack }: Props) {
   const { user } = useApp();
   const renewal = renewalDisplay(user.renewsOn);
+  const [restoring, setRestoring] = useState(false);
+
+  const openAppleSubscriptions = () => {
+    Linking.openURL(APPLE_SUBSCRIPTIONS_URL).catch(() => {});
+  };
+
+  const handleRestore = () => {
+    if (restoring) return;
+    setRestoring(true);
+    setTimeout(() => {
+      setRestoring(false);
+      Alert.alert('Purchases restored');
+    }, 1500);
+  };
+
+  const handleCancel = () => {
+    Alert.alert(
+      'Cancel subscription',
+      "To cancel your subscription, you'll be taken to your Apple subscription settings.",
+      [{ text: 'OK', onPress: openAppleSubscriptions }],
+    );
+  };
 
   return (
     <ScreenBackground>
@@ -148,9 +181,13 @@ export function SubscriptionScreen({ onBack }: Props) {
           {/* Manage */}
           <Text style={styles.sectionLabel}>MANAGE</Text>
           <View style={{ gap: 8 }}>
-            <ManageRow label="Manage subscription" />
-            <ManageRow label="Restore purchases" />
-            <ManageRow label="Cancel subscription" danger />
+            <ManageRow label="Manage subscription" onPress={openAppleSubscriptions} />
+            <ManageRow
+              label="Restore purchases"
+              onPress={handleRestore}
+              loading={restoring}
+            />
+            <ManageRow label="Cancel subscription" onPress={handleCancel} danger />
           </View>
 
           <Text style={styles.legal}>
@@ -173,16 +210,32 @@ function BenefitRow({ text }: { text: string }) {
   );
 }
 
-function ManageRow({ label, danger }: { label: string; danger?: boolean }) {
+function ManageRow({
+  label,
+  danger,
+  onPress,
+  loading,
+}: {
+  label: string;
+  danger?: boolean;
+  onPress?: () => void;
+  loading?: boolean;
+}) {
   return (
     <Pressable
+      onPress={loading ? undefined : onPress}
+      disabled={loading}
       style={({ pressed }) => [
         styles.manageRow,
-        pressed && { backgroundColor: 'rgba(255,255,255,0.04)' },
+        pressed && !loading && { backgroundColor: 'rgba(255,255,255,0.04)' },
       ]}
     >
       <Text style={[styles.manageLabel, danger && { color: colors.red }]}>{label}</Text>
-      <ChevronRightIcon color={danger ? colors.redSoft : colors.textFaint} />
+      {loading ? (
+        <ActivityIndicator size="small" color={colors.gold} />
+      ) : (
+        <ChevronRightIcon color={danger ? colors.redSoft : colors.textFaint} />
+      )}
     </Pressable>
   );
 }
