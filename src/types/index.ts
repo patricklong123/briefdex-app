@@ -30,7 +30,7 @@ export interface UserProfile {
   stats: {
     streak: number;
     briefingsCompleted: number;
-    minutesSaved: number;
+    pagesDigested: number;
   };
 }
 

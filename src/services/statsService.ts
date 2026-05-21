@@ -1,22 +1,22 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const STORAGE_KEY = '@briefdex/stats';
-// Listening saves ~60% of the time it would take to read the equivalent
-// written summary, since people read finance content at ~2x listening pace.
-const MINUTES_SAVED_FACTOR = 0.6;
+// An average reader covers ~2.5 pages of dense financial content per minute,
+// so every minute of audio maps to ~2.5 written pages "digested".
+const PAGES_PER_MINUTE = 2.5;
 const MS_PER_DAY = 86_400_000;
 
 export interface Stats {
   streak: number;
   briefingsCompleted: number;
-  minutesSaved: number;
+  pagesDigested: number;
   lastCompletedDate: string | null; // YYYY-MM-DD, local calendar day
 }
 
 export const EMPTY_STATS: Stats = {
   streak: 0,
   briefingsCompleted: 0,
-  minutesSaved: 0,
+  pagesDigested: 0,
   lastCompletedDate: null,
 };
 
@@ -68,7 +68,7 @@ class StatsService {
   async recordCompletion(durationSeconds: number): Promise<void> {
     const raw = await this.loadRaw();
     const today = todayKey();
-    const minutes = (Math.max(0, durationSeconds) / 60) * MINUTES_SAVED_FACTOR;
+    const pages = (Math.max(0, durationSeconds) / 60) * PAGES_PER_MINUTE;
 
     let nextStreak: number;
     if (!raw.lastCompletedDate) {
@@ -83,7 +83,7 @@ class StatsService {
     const next: Stats = {
       streak: nextStreak,
       briefingsCompleted: raw.briefingsCompleted + 1,
-      minutesSaved: raw.minutesSaved + minutes,
+      pagesDigested: raw.pagesDigested + pages,
       lastCompletedDate: today,
     };
     this.cache = next;

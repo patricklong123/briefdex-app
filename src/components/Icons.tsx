@@ -42,6 +42,30 @@ export const ClockIcon = ({ size = 22, color = colors.gold }: IconProps) => (
   </Svg>
 );
 
+export const SunriseIcon = ({ size = 22, color = colors.gold }: IconProps) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <Path
+      d="M7 17a5 5 0 0110 0M3 17h18M12 4v3M5.6 9.6l1.4 1.4M18.4 9.6L17 11M2 21h20"
+      stroke={color}
+      strokeWidth={1.5}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </Svg>
+);
+
+export const BookIcon = ({ size = 22, color = colors.gold }: IconProps) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <Path
+      d="M4 4h5a3 3 0 013 3v13a2.5 2.5 0 00-2.5-2.5H4V4zM20 4h-5a3 3 0 00-3 3v13a2.5 2.5 0 012.5-2.5H20V4z"
+      stroke={color}
+      strokeWidth={1.5}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </Svg>
+);
+
 export const BellIcon = ({ size = 20, color = colors.gold }: IconProps) => (
   <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
     <Path

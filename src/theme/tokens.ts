@@ -142,6 +142,21 @@ export interface ChannelTheme {
   channelLabel: string;
 }
 
+// Order used by the "Auto-play next channel" preference.
+export const CHANNEL_SEQUENCE: ChannelKey[] = [
+  'daily-wrap',
+  'nz-markets',
+  'global-markets',
+  'trans-tasman',
+  'macro-rbnz',
+];
+
+export function nextChannelInSequence(current: ChannelKey): ChannelKey | null {
+  const idx = CHANNEL_SEQUENCE.indexOf(current);
+  if (idx < 0 || idx >= CHANNEL_SEQUENCE.length - 1) return null;
+  return CHANNEL_SEQUENCE[idx + 1];
+}
+
 export const CHANNEL_THEMES: Record<ChannelKey, ChannelTheme> = {
   'daily-wrap': {
     apiChannel: 'daily-wrap',

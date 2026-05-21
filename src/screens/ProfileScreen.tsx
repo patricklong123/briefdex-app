@@ -10,13 +10,13 @@ import { useAudioPlayer } from '../hooks/useAudioPlayer';
 import { useStats } from '../hooks/useStats';
 import {
   BellIcon,
+  BookIcon,
   CardIcon,
-  CheckIcon,
   ChevronRightIcon,
-  ClockIcon,
   FlameIcon,
   GearIcon,
   LogoutIcon,
+  SunriseIcon,
 } from '../components/Icons';
 
 interface Props {
@@ -38,10 +38,7 @@ export function ProfileScreen({
   const player = useAudioPlayer();
   const stats = useStats();
   const initial = user.name.charAt(0);
-  const minutesSavedLabel =
-    stats.minutesSaved >= 60
-      ? `${(stats.minutesSaved / 60).toFixed(1)} hrs`
-      : `${Math.round(stats.minutesSaved)} min`;
+  const pagesDigestedLabel = String(Math.round(stats.pagesDigested));
 
   return (
     <ScreenBackground>
@@ -97,14 +94,14 @@ export function ProfileScreen({
                   label="Day streak"
                 />
                 <StatCard
-                  icon={<CheckIcon />}
+                  icon={<SunriseIcon />}
                   value={String(stats.briefingsCompleted)}
-                  label="Briefings completed"
+                  label="Mornings ahead"
                 />
                 <StatCard
-                  icon={<ClockIcon />}
-                  value={minutesSavedLabel}
-                  label="Minutes saved"
+                  icon={<BookIcon />}
+                  value={pagesDigestedLabel}
+                  label="Pages digested"
                 />
               </View>
             </LinearGradient>

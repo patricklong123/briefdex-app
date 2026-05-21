@@ -20,7 +20,7 @@ const DEFAULT_USER: UserProfile = {
   email: 'patrick@briefdex.co.nz',
   subscriptionTier: 'premium',
   renewsOn: '12 June 2026',
-  stats: { streak: 14, briefingsCompleted: 42, minutesSaved: 378 },
+  stats: { streak: 14, briefingsCompleted: 42, pagesDigested: 945 },
 };
 
 const AppContext = createContext<AppContextValue | null>(null);

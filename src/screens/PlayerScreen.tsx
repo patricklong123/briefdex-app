@@ -10,10 +10,12 @@ import {
   ChannelTheme,
   colors,
   fonts,
+  nextChannelInSequence,
   radii,
   spacing,
 } from '../theme/tokens';
 import { useAudioPlayer } from '../hooks/useAudioPlayer';
+import { usePreferences } from '../hooks/usePreferences';
 import { ScrubBar } from '../components/ScrubBar';
 import { PulsingDot } from '../components/PulsingDot';
 import { SkipButton } from '../components/SkipButton';
@@ -38,10 +40,17 @@ function formatRate(r: number): string {
 }
 
 export function PlayerScreen({ onClose, channelKey = 'daily-wrap' }: Props) {
-  const theme = CHANNEL_THEMES[channelKey];
+  const [currentChannel, setCurrentChannel] = useState<ChannelKey>(channelKey);
+  const theme = CHANNEL_THEMES[currentChannel];
   const player = useAudioPlayer();
+  const { prefs } = usePreferences();
   const [scrubRatio, setScrubRatio] = useState<number | null>(null);
   const [fetchError, setFetchError] = useState<string | null>(null);
+
+  // If the modal re-opens with a different channel without unmounting, follow the prop.
+  useEffect(() => {
+    setCurrentChannel(channelKey);
+  }, [channelKey]);
 
   const loadedChannel = player.episode?.channel;
   const channelAlreadyLoaded = loadedChannel === theme.apiChannel;
@@ -77,6 +86,18 @@ export function PlayerScreen({ onClose, channelKey = 'daily-wrap' }: Props) {
       cancelled = true;
     };
   }, [needsFetch, theme.apiChannel]);
+
+  // Auto-advance to the next channel when the current episode finishes,
+  // if the preference is enabled and there is a next channel in the sequence.
+  useEffect(() => {
+    if (!prefs.autoplayNextChannel) return;
+    return audioService.onFinish(() => {
+      const next = nextChannelInSequence(currentChannel);
+      if (!next) return;
+      setIsFetching(true);
+      setCurrentChannel(next);
+    });
+  }, [prefs.autoplayNextChannel, currentChannel]);
 
   const episode = player.episode;
 

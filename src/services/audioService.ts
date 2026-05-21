@@ -14,6 +14,8 @@ type Listener = (state: {
   rate: PlaybackRate;
 }) => void;
 
+type FinishListener = (episode: Episode) => void;
+
 class AudioService {
   private sound: Audio.Sound | null = null;
   private episode: Episode | null = null;
@@ -22,6 +24,7 @@ class AudioService {
   private durationSec = 0;
   private rate: PlaybackRate = 1.0;
   private listeners = new Set<Listener>();
+  private finishListeners = new Set<FinishListener>();
   private configured = false;
   private lastProgressSavePosSec = Number.NEGATIVE_INFINITY;
   private defaultRate: PlaybackRate = 1.0;
@@ -50,6 +53,15 @@ class AudioService {
     this.listeners.add(l);
     l(this.snapshot());
     return () => this.listeners.delete(l);
+  }
+
+  onFinish(l: FinishListener): () => void {
+    this.finishListeners.add(l);
+    return () => this.finishListeners.delete(l);
+  }
+
+  private emitFinish(episode: Episode) {
+    this.finishListeners.forEach((l) => l(episode));
   }
 
   private emit() {
@@ -105,10 +117,13 @@ class AudioService {
     if (this.episode) {
       storage.setPlaybackPosition(this.episode.id, this.positionSec);
       if (status.didJustFinish) {
-        progressService.markComplete(this.episode.channel, this.episode.dateKey);
-      } else {
-        this.maybeSaveProgress();
+        const finished = this.episode;
+        progressService.markComplete(finished.channel, finished.dateKey);
+        this.emit();
+        this.emitFinish(finished);
+        return;
       }
+      this.maybeSaveProgress();
     }
     this.emit();
   };
@@ -150,10 +165,13 @@ class AudioService {
         if (this.episode) {
           storage.setPlaybackPosition(this.episode.id, this.positionSec);
           if (finished) {
-            progressService.markComplete(this.episode.channel, this.episode.dateKey);
-          } else {
-            this.maybeSaveProgress();
+            const finishedEpisode = this.episode;
+            progressService.markComplete(finishedEpisode.channel, finishedEpisode.dateKey);
+            this.emit();
+            this.emitFinish(finishedEpisode);
+            return;
           }
+          this.maybeSaveProgress();
         }
         this.emit();
       }, 1000);
