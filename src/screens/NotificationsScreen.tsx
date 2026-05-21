@@ -76,6 +76,7 @@ export function NotificationsScreen({ onBack }: Props) {
               onToggle={(v) =>
                 update({ weeklySummary: { ...settings.weeklySummary, enabled: v } })
               }
+              comingSoon
             />
           </View>
 
@@ -95,6 +96,7 @@ function SettingCard({
   onToggle,
   time,
   onTimeChange,
+  comingSoon,
 }: {
   label: string;
   subtitle: string;
@@ -102,25 +104,41 @@ function SettingCard({
   onToggle: (v: boolean) => void;
   time?: TimeOfDay;
   onTimeChange?: (t: TimeOfDay) => void;
+  comingSoon?: boolean;
 }) {
   return (
-    <View style={styles.card}>
+    <View style={[styles.card, comingSoon && styles.cardComingSoon]}>
       <View style={styles.cardHeader}>
         <View style={{ flex: 1, paddingRight: 12 }}>
-          <Text style={styles.cardLabel}>{label}</Text>
+          <View style={styles.labelRow}>
+            <Text style={styles.cardLabel}>{label}</Text>
+            {comingSoon ? (
+              <View style={styles.comingSoonPill}>
+                <Text style={styles.comingSoonText}>COMING SOON</Text>
+              </View>
+            ) : null}
+          </View>
           <Text style={styles.cardSubtitle}>{subtitle}</Text>
         </View>
-        <Toggle value={enabled} onChange={onToggle} />
+        <Toggle value={comingSoon ? false : enabled} onChange={onToggle} disabled={comingSoon} />
       </View>
 
-      {enabled && time && onTimeChange ? (
+      {!comingSoon && enabled && time && onTimeChange ? (
         <TimePicker time={time} onChange={onTimeChange} />
       ) : null}
     </View>
   );
 }
 
-function Toggle({ value, onChange }: { value: boolean; onChange: (v: boolean) => void }) {
+function Toggle({
+  value,
+  onChange,
+  disabled,
+}: {
+  value: boolean;
+  onChange: (v: boolean) => void;
+  disabled?: boolean;
+}) {
   const anim = React.useRef(new Animated.Value(value ? 1 : 0)).current;
 
   React.useEffect(() => {
@@ -145,7 +163,11 @@ function Toggle({ value, onChange }: { value: boolean; onChange: (v: boolean) =>
   });
 
   return (
-    <Pressable onPress={() => onChange(!value)} hitSlop={8}>
+    <Pressable
+      onPress={disabled ? undefined : () => onChange(!value)}
+      disabled={disabled}
+      hitSlop={8}
+    >
       <Animated.View
         style={[
           styles.toggleTrack,
@@ -309,14 +331,37 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.02)',
     gap: spacing.md,
   },
+  cardComingSoon: {
+    opacity: 0.5,
+  },
   cardHeader: {
     flexDirection: 'row',
     alignItems: 'center',
+  },
+  labelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    flexWrap: 'wrap',
   },
   cardLabel: {
     fontFamily: fonts.bodySemiBold,
     fontSize: 14,
     color: colors.white,
+  },
+  comingSoonPill: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: radii.pill,
+    backgroundColor: colors.goldFaint,
+    borderWidth: 1,
+    borderColor: colors.goldBorder,
+  },
+  comingSoonText: {
+    fontFamily: fonts.bodySemiBold,
+    fontSize: 8,
+    letterSpacing: 1,
+    color: colors.gold,
   },
   cardSubtitle: {
     fontFamily: fonts.body,
