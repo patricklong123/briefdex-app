@@ -1,6 +1,7 @@
 import React from 'react';
 import {
   Animated,
+  Linking,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -82,7 +83,10 @@ export function SettingsScreen({ onBack }: Props) {
 
           <Text style={styles.sectionLabel}>ABOUT</Text>
           <View style={{ gap: 8 }}>
-            <AboutRow label="Privacy Policy" />
+            <AboutRow
+              label="Privacy Policy"
+              onPress={() => Linking.openURL('https://briefdex.com/privacy-policy.html')}
+            />
             <AboutRow label="Terms of Service" />
             <AboutRow label="Version" value="1.0 · MVP" />
           </View>
@@ -193,11 +197,20 @@ function Toggle({ value, onChange }: { value: boolean; onChange: (v: boolean) =>
   );
 }
 
-function AboutRow({ label, value }: { label: string; value?: string }) {
+function AboutRow({
+  label,
+  value,
+  onPress,
+}: {
+  label: string;
+  value?: string;
+  onPress?: () => void;
+}) {
   const isStatic = value !== undefined;
   return (
     <Pressable
       disabled={isStatic}
+      onPress={onPress}
       style={({ pressed }) => [
         styles.aboutRow,
         !isStatic && pressed && { backgroundColor: 'rgba(255,255,255,0.04)' },

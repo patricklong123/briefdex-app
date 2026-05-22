@@ -1,14 +1,28 @@
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Linking, StyleSheet, Text, View } from 'react-native';
 import { OnboardingLayout } from './OnboardingLayout';
 import { GoldButton } from '../../components/GoldButton';
 import { colors, fonts, radii, spacing } from '../../theme/tokens';
 
 const TAGS = ['NZ-first', 'Primary sources', 'Editor reviewed', '7:30am daily'];
+const PRIVACY_URL = 'https://briefdex.com/privacy-policy.html';
 
 export function BrandScreen({ onNext }: { onNext: () => void }) {
   return (
-    <OnboardingLayout centered footer={<GoldButton label="Let's get started" onPress={onNext} large />}>
+    <OnboardingLayout
+      centered
+      footer={
+        <View>
+          <GoldButton label="Let's get started" onPress={onNext} large />
+          <Text style={styles.legal}>
+            By continuing, you agree to our{' '}
+            <Text style={styles.legalLink} onPress={() => Linking.openURL(PRIVACY_URL)}>
+              Privacy Policy
+            </Text>
+          </Text>
+        </View>
+      }
+    >
       <View style={styles.center}>
         <View style={styles.ring}>
           <Text style={styles.ringText}>Bdx</Text>
@@ -77,5 +91,17 @@ const styles = StyleSheet.create({
     fontFamily: fonts.bodyMedium,
     fontSize: 10,
     color: colors.goldLight,
+  },
+  legal: {
+    fontFamily: fonts.body,
+    fontSize: 11,
+    color: colors.textDim,
+    textAlign: 'center',
+    marginTop: spacing.md,
+  },
+  legalLink: {
+    fontFamily: fonts.bodyMedium,
+    color: colors.gold,
+    textDecorationLine: 'underline',
   },
 });
