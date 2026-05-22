@@ -218,7 +218,11 @@ export function PlayerScreen({ onClose, channelKey = 'daily-wrap' }: Props) {
           </View>
 
           <View style={styles.transport}>
-            <SkipButton direction="back" onPress={player.skipBack} />
+            <SkipButton
+              direction="back"
+              seconds={prefs.skipInterval}
+              onPress={() => player.skipBack(prefs.skipInterval)}
+            />
             <Pressable
               onPress={togglePlay}
               style={({ pressed }) => [
@@ -249,7 +253,11 @@ export function PlayerScreen({ onClose, channelKey = 'daily-wrap' }: Props) {
                 )}
               </LinearGradient>
             </Pressable>
-            <SkipButton direction="forward" onPress={player.skipForward} />
+            <SkipButton
+              direction="forward"
+              seconds={prefs.skipInterval}
+              onPress={() => player.skipForward(prefs.skipInterval)}
+            />
           </View>
 
           <Pressable
