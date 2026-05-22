@@ -6,6 +6,7 @@ import { colors, fonts, radii, spacing } from '../../theme/tokens';
 
 const TAGS = ['NZ-first', 'Primary sources', 'Editor reviewed', '7:30am daily'];
 const PRIVACY_URL = 'https://briefdex.com/privacy-policy.html';
+const TERMS_URL = 'https://briefdex.com/terms-of-service.html';
 
 export function BrandScreen({ onNext }: { onNext: () => void }) {
   return (
@@ -18,6 +19,10 @@ export function BrandScreen({ onNext }: { onNext: () => void }) {
             By continuing, you agree to our{' '}
             <Text style={styles.legalLink} onPress={() => Linking.openURL(PRIVACY_URL)}>
               Privacy Policy
+            </Text>
+            {' '}and{' '}
+            <Text style={styles.legalLink} onPress={() => Linking.openURL(TERMS_URL)}>
+              Terms of Service
             </Text>
           </Text>
         </View>

@@ -87,7 +87,10 @@ export function SettingsScreen({ onBack }: Props) {
               label="Privacy Policy"
               onPress={() => Linking.openURL('https://briefdex.com/privacy-policy.html')}
             />
-            <AboutRow label="Terms of Service" />
+            <AboutRow
+              label="Terms of Service"
+              onPress={() => Linking.openURL('https://briefdex.com/terms-of-service.html')}
+            />
             <AboutRow label="Version" value="1.0 · MVP" />
           </View>
         </ScrollView>
