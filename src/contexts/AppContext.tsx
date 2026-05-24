@@ -1,6 +1,8 @@
 import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
+import type { Session } from '@supabase/supabase-js';
 import { statsService } from '../services/statsService';
 import { storage } from '../services/storageService';
+import { supabase } from '../services/supabaseClient';
 import { OnboardingAnswers, UserProfile } from '../types';
 
 interface AppContextValue {
@@ -9,10 +11,19 @@ interface AppContextValue {
   clearOpenPlayerOnStart: () => void;
   answers: OnboardingAnswers;
   user: UserProfile;
+  session: Session | null;
+  authReady: boolean;
+  pendingSignUp: boolean;
   setAnswers: (patch: Partial<OnboardingAnswers>) => Promise<void>;
   completeOnboarding: (openPlayer?: boolean) => Promise<void>;
   setUser: (patch: Partial<UserProfile>) => Promise<void>;
   resetAll: () => Promise<void>;
+  signIn: (email: string, password: string) => Promise<void>;
+  signUp: (email: string, password: string) => Promise<void>;
+  sendPasswordReset: (email: string) => Promise<void>;
+  signOut: () => Promise<void>;
+  requestSignUp: () => Promise<void>;
+  clearPendingSignUp: () => void;
 }
 
 const DEFAULT_USER: UserProfile = {
@@ -30,6 +41,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [openPlayerOnStart, setOpenPlayerOnStart] = useState(false);
   const [answers, setAnswersState] = useState<OnboardingAnswers>({});
   const [user, setUserState] = useState<UserProfile>(DEFAULT_USER);
+  const [session, setSession] = useState<Session | null>(null);
+  const [authReady, setAuthReady] = useState(false);
+  const [pendingSignUp, setPendingSignUp] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -42,6 +56,19 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       setAnswersState(a);
       if (u) setUserState(u);
     })();
+  }, []);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => {
+      setSession(data.session);
+      setAuthReady(true);
+    });
+    const { data: sub } = supabase.auth.onAuthStateChange((_event, s) => {
+      setSession(s);
+    });
+    return () => {
+      sub.subscription.unsubscribe();
+    };
   }, []);
 
   const setAnswers = useCallback(
@@ -59,6 +86,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     await storage.setOnboardingComplete(true);
     setOpenPlayerOnStart(openPlayer);
     setOnboardingComplete(true);
+    setPendingSignUp(false);
   }, []);
 
   const clearOpenPlayerOnStart = useCallback(() => {
@@ -74,11 +102,42 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const resetAll = useCallback(async () => {
+    await supabase.auth.signOut().catch(() => {});
     await storage.reset();
     await statsService.reset();
     setOnboardingComplete(false);
     setAnswersState({});
     setUserState(DEFAULT_USER);
+    setPendingSignUp(false);
+  }, []);
+
+  const signIn = useCallback(async (email: string, password: string) => {
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) throw error;
+  }, []);
+
+  const signUp = useCallback(async (email: string, password: string) => {
+    const { error } = await supabase.auth.signUp({ email, password });
+    if (error) throw error;
+  }, []);
+
+  const sendPasswordReset = useCallback(async (email: string) => {
+    const { error } = await supabase.auth.resetPasswordForEmail(email);
+    if (error) throw error;
+  }, []);
+
+  const signOut = useCallback(async () => {
+    await supabase.auth.signOut();
+  }, []);
+
+  const requestSignUp = useCallback(async () => {
+    await storage.setOnboardingComplete(false);
+    setOnboardingComplete(false);
+    setPendingSignUp(true);
+  }, []);
+
+  const clearPendingSignUp = useCallback(() => {
+    setPendingSignUp(false);
   }, []);
 
   return (
@@ -89,10 +148,19 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         clearOpenPlayerOnStart,
         answers,
         user,
+        session,
+        authReady,
+        pendingSignUp,
         setAnswers,
         completeOnboarding,
         setUser,
         resetAll,
+        signIn,
+        signUp,
+        sendPasswordReset,
+        signOut,
+        requestSignUp,
+        clearPendingSignUp,
       }}
     >
       {children}

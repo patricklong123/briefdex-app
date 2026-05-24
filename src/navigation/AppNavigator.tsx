@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Modal, View } from 'react-native';
 import { useApp } from '../contexts/AppContext';
 import { OnboardingNavigator } from '../screens/onboarding/OnboardingNavigator';
+import { LoginScreen } from '../screens/LoginScreen';
 import { HomeScreen } from '../screens/HomeScreen';
 import { ProfileScreen } from '../screens/ProfileScreen';
 import { PlayerScreen } from '../screens/PlayerScreen';
@@ -14,19 +15,24 @@ import { ChannelKey, colors } from '../theme/tokens';
 type Tab = 'home' | 'profile' | 'notifications' | 'subscription' | 'annual' | 'settings';
 
 export function AppNavigator() {
-  const { onboardingComplete, openPlayerOnStart, clearOpenPlayerOnStart } = useApp();
+  const {
+    onboardingComplete,
+    openPlayerOnStart,
+    clearOpenPlayerOnStart,
+    session,
+    authReady,
+    pendingSignUp,
+    requestSignUp,
+  } = useApp();
   const [tab, setTab] = useState<Tab>('home');
   const [playerOpen, setPlayerOpen] = useState(false);
   const [playerChannel, setPlayerChannel] = useState<ChannelKey>('daily-wrap');
 
-  // When called with a channel, switch to it; otherwise resume the last channel
-  // (so the "Now Playing" pill in the bottom nav doesn't reset back to Daily Wrap).
   const openPlayer = (channel?: ChannelKey) => {
     if (channel) setPlayerChannel(channel);
     setPlayerOpen(true);
   };
 
-  // Open the player automatically when coming from the FirstUse screen
   useEffect(() => {
     if (openPlayerOnStart) {
       openPlayer('daily-wrap');
@@ -34,12 +40,18 @@ export function AppNavigator() {
     }
   }, [openPlayerOnStart]);
 
-  if (onboardingComplete === null) {
+  if (onboardingComplete === null || !authReady) {
     return <View style={{ flex: 1, backgroundColor: colors.g900 }} />;
   }
 
+  // Returning user: completed onboarding before, but no active session → standalone Login.
+  if (!session && onboardingComplete && !pendingSignUp) {
+    return <LoginScreen onRequestSignUp={requestSignUp} />;
+  }
+
+  // First-time user, or returning user who tapped "Sign up" from Login.
   if (!onboardingComplete) {
-    return <OnboardingNavigator />;
+    return <OnboardingNavigator initialRouteName={pendingSignUp ? 'Auth' : undefined} />;
   }
 
   return (
