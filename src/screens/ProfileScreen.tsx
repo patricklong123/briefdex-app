@@ -1,5 +1,5 @@
 import React from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors, fonts, radii, shadows, spacing } from '../theme/tokens';
@@ -135,6 +135,26 @@ export function ProfileScreen({
             <LogoutIcon />
             <Text style={styles.logoutText}>Log out</Text>
           </Pressable>
+
+          {/* TODO: remove before App Store submission */}
+          {__DEV__ && (
+            <Pressable
+              onPress={() =>
+                Alert.alert(
+                  'Reset onboarding?',
+                  'Clears AsyncStorage and returns to the onboarding flow.',
+                  [
+                    { text: 'Cancel', style: 'cancel' },
+                    { text: 'Reset', style: 'destructive', onPress: () => resetAll() },
+                  ],
+                )
+              }
+              style={({ pressed }) => [styles.devButton, pressed && { opacity: 0.7 }]}
+            >
+              <Text style={styles.devBadge}>DEV ONLY</Text>
+              <Text style={styles.devButtonText}>Reset Onboarding</Text>
+            </Pressable>
+          )}
 
           <Text style={styles.version}>Briefdex v1.0 · MVP · May 2026</Text>
         </ScrollView>
@@ -349,6 +369,36 @@ const styles = StyleSheet.create({
     fontFamily: fonts.bodySemiBold,
     fontSize: 13,
     color: colors.red,
+  },
+  devButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 12,
+    borderRadius: radii.md,
+    borderWidth: 1,
+    borderColor: 'rgba(201,168,76,0.4)',
+    borderStyle: 'dashed',
+    backgroundColor: 'rgba(201,168,76,0.05)',
+    marginTop: spacing.md,
+  },
+  devBadge: {
+    fontFamily: fonts.bodySemiBold,
+    fontSize: 8,
+    letterSpacing: 1,
+    color: colors.gold,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: radii.sm,
+    backgroundColor: 'rgba(201,168,76,0.15)',
+    borderWidth: 1,
+    borderColor: 'rgba(201,168,76,0.35)',
+  },
+  devButtonText: {
+    fontFamily: fonts.bodySemiBold,
+    fontSize: 13,
+    color: colors.gold,
   },
   version: {
     textAlign: 'center',
