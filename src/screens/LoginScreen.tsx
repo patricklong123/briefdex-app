@@ -1,34 +1,53 @@
 import React, { useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
-import { OnboardingLayout } from './OnboardingLayout';
-import { GoldButton } from '../../components/GoldButton';
-import { colors, fonts, radii, spacing } from '../../theme/tokens';
-import { useApp } from '../../contexts/AppContext';
+import { OnboardingLayout } from './onboarding/OnboardingLayout';
+import { GoldButton } from '../components/GoldButton';
+import { colors, fonts, radii, spacing } from '../theme/tokens';
+import { useApp } from '../contexts/AppContext';
 
 interface Props {
-  onNext: () => void;
-  onOpenLogin: () => void;
+  onRequestSignUp: () => void;
 }
 
-export function AuthScreen({ onNext, onOpenLogin }: Props) {
-  const { signUp } = useApp();
+export function LoginScreen({ onRequestSignUp }: Props) {
+  const { signIn, sendPasswordReset } = useApp();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [resetSent, setResetSent] = useState(false);
 
-  const handleSignUp = async () => {
+  const handleLogIn = async () => {
     setError(null);
+    setResetSent(false);
     if (!email || !password) {
       setError('Enter your email and password.');
       return;
     }
     setSubmitting(true);
     try {
-      await signUp(email.trim(), password);
-      onNext();
+      await signIn(email.trim(), password);
+      // Session listener in AppContext routes us to Home.
     } catch (e: any) {
-      setError(e?.message ?? 'Could not sign up.');
+      setError(e?.message ?? 'Could not sign in.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleForgotPassword = async () => {
+    setError(null);
+    setResetSent(false);
+    if (!email) {
+      setError('Enter your email above first.');
+      return;
+    }
+    setSubmitting(true);
+    try {
+      await sendPasswordReset(email.trim());
+      setResetSent(true);
+    } catch (e: any) {
+      setError(e?.message ?? 'Could not send reset email.');
     } finally {
       setSubmitting(false);
     }
@@ -36,7 +55,7 @@ export function AuthScreen({ onNext, onOpenLogin }: Props) {
 
   return (
     <OnboardingLayout centered>
-      <Text style={styles.heading}>Let's get you set up.</Text>
+      <Text style={styles.heading}>Welcome back.</Text>
 
       <View style={styles.inputWrap}>
         <TextInput
@@ -59,27 +78,32 @@ export function AuthScreen({ onNext, onOpenLogin }: Props) {
           placeholder="Password"
           placeholderTextColor={colors.textFaint}
           autoCapitalize="none"
-          autoComplete="password-new"
+          autoComplete="password"
           secureTextEntry
           editable={!submitting}
           style={styles.input}
         />
       </View>
 
+      <Pressable onPress={handleForgotPassword} disabled={submitting} hitSlop={8} style={styles.forgotWrap}>
+        <Text style={styles.forgotText}>Forgot password?</Text>
+      </Pressable>
+
       {error && <Text style={styles.error}>{error}</Text>}
+      {resetSent && (
+        <Text style={styles.success}>Check your email for a password reset link.</Text>
+      )}
 
       <GoldButton
-        label={submitting ? 'Signing up…' : 'Sign up'}
-        onPress={handleSignUp}
+        label={submitting ? 'Logging in…' : 'Log In'}
+        onPress={handleLogIn}
         disabled={submitting}
         style={{ marginTop: spacing.lg }}
       />
 
-      <Text style={styles.legal}>🔒 We never share your data.</Text>
-
-      <Pressable onPress={onOpenLogin} disabled={submitting} hitSlop={12} style={styles.loginLinkWrap}>
-        <Text style={styles.loginLinkText}>
-          Already have an account? <Text style={styles.loginLinkAction}>Log in</Text>
+      <Pressable onPress={onRequestSignUp} disabled={submitting} hitSlop={12} style={styles.signUpLinkWrap}>
+        <Text style={styles.signUpLinkText}>
+          Don't have an account? <Text style={styles.signUpLinkAction}>Sign up</Text>
         </Text>
       </Pressable>
     </OnboardingLayout>
@@ -106,6 +130,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 14,
   },
+  forgotWrap: {
+    alignSelf: 'flex-end',
+    marginTop: spacing.sm,
+  },
+  forgotText: {
+    fontFamily: fonts.bodySemiBold,
+    fontSize: 12,
+    color: colors.gold,
+  },
   error: {
     fontFamily: fonts.body,
     fontSize: 12,
@@ -113,23 +146,23 @@ const styles = StyleSheet.create({
     marginTop: spacing.md,
     textAlign: 'center',
   },
-  legal: {
-    textAlign: 'center',
+  success: {
     fontFamily: fonts.body,
-    fontSize: 10,
-    color: colors.textFaint,
-    marginTop: spacing.lg,
+    fontSize: 12,
+    color: colors.gold,
+    marginTop: spacing.md,
+    textAlign: 'center',
   },
-  loginLinkWrap: {
+  signUpLinkWrap: {
     marginTop: spacing.xl,
     alignItems: 'center',
   },
-  loginLinkText: {
+  signUpLinkText: {
     fontFamily: fonts.body,
     fontSize: 13,
     color: colors.textDim,
   },
-  loginLinkAction: {
+  signUpLinkAction: {
     fontFamily: fonts.bodySemiBold,
     color: colors.gold,
   },
