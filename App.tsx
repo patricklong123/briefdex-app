@@ -1,6 +1,7 @@
 import 'react-native-gesture-handler';
 import React, { useEffect } from 'react';
-import { View, ActivityIndicator } from 'react-native';
+import { View, ActivityIndicator, Platform } from 'react-native';
+import Purchases, { LOG_LEVEL } from 'react-native-purchases';
 import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -59,6 +60,13 @@ export default function App() {
 
   useEffect(() => {
     audioService.configure().catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    if (Platform.OS === 'ios') {
+      Purchases.setLogLevel(LOG_LEVEL.VERBOSE);
+      Purchases.configure({ apiKey: 'REVENUECAT_API_KEY_PLACEHOLDER' });
+    }
   }, []);
 
   useEffect(() => {

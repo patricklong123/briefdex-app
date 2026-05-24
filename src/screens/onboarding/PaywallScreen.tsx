@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import RevenueCatUI, { PAYWALL_RESULT } from 'react-native-purchases-ui';
 import { ScreenBackground } from '../../components/ScreenBackground';
 import { GoldButton } from '../../components/GoldButton';
 import { colors, fonts, radii, shadows, spacing } from '../../theme/tokens';
@@ -16,6 +17,13 @@ export function PaywallScreen({ onStartTrial }: { onStartTrial: () => void }) {
   const { user } = useApp();
   const firstName = user.name.split(' ')[0];
   const [plan, setPlan] = useState<'monthly' | 'annual'>('monthly');
+
+  const handleStartTrial = async () => {
+    const result = await RevenueCatUI.presentPaywall();
+    if (result === PAYWALL_RESULT.PURCHASED || result === PAYWALL_RESULT.RESTORED) {
+      onStartTrial();
+    }
+  };
 
   return (
     <ScreenBackground>
@@ -87,7 +95,7 @@ export function PaywallScreen({ onStartTrial }: { onStartTrial: () => void }) {
           {/* CTA */}
           <GoldButton
             label="Start 7-day free trial"
-            onPress={onStartTrial}
+            onPress={handleStartTrial}
             large
             style={shadows.goldButton}
           />

@@ -99,8 +99,8 @@ export function OnboardingNavigator() {
         name="Paywall"
         options={{ gestureEnabled: false, headerBackVisible: false, animation: 'fade' }}
       >
-        {({ navigation }) => (
-          <PaywallScreen onStartTrial={() => navigation.navigate('FirstUse')} />
+        {() => (
+          <PaywallScreen onStartTrial={() => completeOnboarding(true)} />
         )}
       </Stack.Screen>
       <Stack.Screen name="FirstUse" options={{ gestureEnabled: false }}>
