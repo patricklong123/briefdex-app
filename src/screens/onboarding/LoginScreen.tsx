@@ -1,21 +1,20 @@
 import React, { useState } from 'react';
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { StyleSheet, Text, TextInput, View } from 'react-native';
 import { OnboardingLayout } from './OnboardingLayout';
 import { GoldButton } from '../../components/GoldButton';
 import { colors, fonts, radii, spacing } from '../../theme/tokens';
 
 interface Props {
-  onNext: () => void;
-  onOpenLogin: () => void;
+  onLogIn: () => void;
 }
 
-export function AuthScreen({ onNext, onOpenLogin }: Props) {
+export function LoginScreen({ onLogIn }: Props) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
   return (
     <OnboardingLayout centered>
-      <Text style={styles.heading}>Let's get you set up.</Text>
+      <Text style={styles.heading}>Welcome back.</Text>
 
       <View style={styles.inputWrap}>
         <TextInput
@@ -37,21 +36,13 @@ export function AuthScreen({ onNext, onOpenLogin }: Props) {
           placeholder="Password"
           placeholderTextColor={colors.textFaint}
           autoCapitalize="none"
-          autoComplete="password-new"
+          autoComplete="password"
           secureTextEntry
           style={styles.input}
         />
       </View>
 
-      <GoldButton label="Sign up" onPress={onNext} style={{ marginTop: spacing.lg }} />
-
-      <Text style={styles.legal}>🔒 We never share your data.</Text>
-
-      <Pressable onPress={onOpenLogin} hitSlop={12} style={styles.loginLinkWrap}>
-        <Text style={styles.loginLinkText}>
-          Already have an account? <Text style={styles.loginLinkAction}>Log in</Text>
-        </Text>
-      </Pressable>
+      <GoldButton label="Log In" onPress={onLogIn} style={{ marginTop: spacing.lg }} />
     </OnboardingLayout>
   );
 }
@@ -75,25 +66,5 @@ const styles = StyleSheet.create({
     color: colors.white,
     paddingHorizontal: 16,
     paddingVertical: 14,
-  },
-  legal: {
-    textAlign: 'center',
-    fontFamily: fonts.body,
-    fontSize: 10,
-    color: colors.textFaint,
-    marginTop: spacing.lg,
-  },
-  loginLinkWrap: {
-    marginTop: spacing.xl,
-    alignItems: 'center',
-  },
-  loginLinkText: {
-    fontFamily: fonts.body,
-    fontSize: 13,
-    color: colors.textDim,
-  },
-  loginLinkAction: {
-    fontFamily: fonts.bodySemiBold,
-    color: colors.gold,
   },
 });
