@@ -1,9 +1,27 @@
 import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
+import { Linking } from 'react-native';
 import type { Session } from '@supabase/supabase-js';
 import { statsService } from '../services/statsService';
 import { storage } from '../services/storageService';
 import { supabase } from '../services/supabaseClient';
 import { OnboardingAnswers, UserProfile } from '../types';
+
+const PASSWORD_RESET_REDIRECT = 'briefdex://reset-password';
+
+function parseUrlFragment(url: string): Record<string, string> {
+  const hashIndex = url.indexOf('#');
+  if (hashIndex === -1) return {};
+  const fragment = url.substring(hashIndex + 1);
+  const out: Record<string, string> = {};
+  for (const pair of fragment.split('&')) {
+    if (!pair) continue;
+    const eq = pair.indexOf('=');
+    const k = eq === -1 ? pair : pair.substring(0, eq);
+    const v = eq === -1 ? '' : pair.substring(eq + 1);
+    if (k) out[decodeURIComponent(k)] = decodeURIComponent(v);
+  }
+  return out;
+}
 
 interface AppContextValue {
   onboardingComplete: boolean | null;
@@ -14,6 +32,7 @@ interface AppContextValue {
   session: Session | null;
   authReady: boolean;
   pendingSignUp: boolean;
+  passwordRecoveryActive: boolean;
   setAnswers: (patch: Partial<OnboardingAnswers>) => Promise<void>;
   completeOnboarding: (openPlayer?: boolean) => Promise<void>;
   setUser: (patch: Partial<UserProfile>) => Promise<void>;
@@ -21,9 +40,11 @@ interface AppContextValue {
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string) => Promise<void>;
   sendPasswordReset: (email: string) => Promise<void>;
+  updatePassword: (newPassword: string) => Promise<void>;
   signOut: () => Promise<void>;
   requestSignUp: () => Promise<void>;
   clearPendingSignUp: () => void;
+  clearPasswordRecovery: () => void;
 }
 
 const DEFAULT_USER: UserProfile = {
@@ -44,6 +65,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [authReady, setAuthReady] = useState(false);
   const [pendingSignUp, setPendingSignUp] = useState(false);
+  const [passwordRecoveryActive, setPasswordRecoveryActive] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -67,10 +89,42 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const { data: sub } = supabase.auth.onAuthStateChange((event, s) => {
       console.log('[auth] onAuthStateChange:', event, 'session:', s ? s.user.email : null);
       setSession(s);
+      if (event === 'PASSWORD_RECOVERY') {
+        console.log('[auth] PASSWORD_RECOVERY event — showing reset screen');
+        setPasswordRecoveryActive(true);
+      }
     });
     return () => {
       sub.subscription.unsubscribe();
     };
+  }, []);
+
+  useEffect(() => {
+    const handleUrl = async (url: string | null) => {
+      if (!url) return;
+      console.log('[deeplink] received:', url);
+      const params = parseUrlFragment(url);
+      const isRecovery =
+        params.type === 'recovery' ||
+        url.includes('reset-password');
+      if (!isRecovery) return;
+      if (params.access_token && params.refresh_token) {
+        const { data, error } = await supabase.auth.setSession({
+          access_token: params.access_token,
+          refresh_token: params.refresh_token,
+        });
+        if (error) {
+          console.log('[deeplink] setSession error:', error.message);
+          return;
+        }
+        console.log('[deeplink] recovery session set for:', data.session?.user.email);
+        setSession(data.session);
+      }
+      setPasswordRecoveryActive(true);
+    };
+    Linking.getInitialURL().then(handleUrl);
+    const sub = Linking.addEventListener('url', ({ url }) => handleUrl(url));
+    return () => sub.remove();
   }, []);
 
   const setAnswers = useCallback(
@@ -111,6 +165,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setAnswersState({});
     setUserState(DEFAULT_USER);
     setPendingSignUp(false);
+    setPasswordRecoveryActive(false);
   }, []);
 
   const signIn = useCallback(async (email: string, password: string) => {
@@ -121,12 +176,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       throw error;
     }
     console.log('[auth] signIn ok, session user:', data.session?.user.email);
-    // Set session immediately rather than waiting on the listener.
     setSession(data.session);
-    // A successful sign-in implies a returning user who has set up before,
-    // so mark onboarding complete and clear any pending sign-up so AppNavigator
-    // routes straight to Home (even if signIn was triggered from inside
-    // OnboardingNavigator's Login route).
     await storage.setOnboardingComplete(true);
     setOnboardingComplete(true);
     setPendingSignUp(false);
@@ -144,8 +194,20 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const sendPasswordReset = useCallback(async (email: string) => {
-    const { error } = await supabase.auth.resetPasswordForEmail(email);
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: PASSWORD_RESET_REDIRECT,
+    });
     if (error) throw error;
+  }, []);
+
+  const updatePassword = useCallback(async (newPassword: string) => {
+    console.log('[auth] updatePassword called');
+    const { error } = await supabase.auth.updateUser({ password: newPassword });
+    if (error) {
+      console.log('[auth] updatePassword error:', error.status, error.message);
+      throw error;
+    }
+    console.log('[auth] updatePassword ok');
   }, []);
 
   const signOut = useCallback(async () => {
@@ -162,6 +224,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setPendingSignUp(false);
   }, []);
 
+  const clearPasswordRecovery = useCallback(() => {
+    setPasswordRecoveryActive(false);
+  }, []);
+
   return (
     <AppContext.Provider
       value={{
@@ -173,6 +239,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         session,
         authReady,
         pendingSignUp,
+        passwordRecoveryActive,
         setAnswers,
         completeOnboarding,
         setUser,
@@ -180,9 +247,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         signIn,
         signUp,
         sendPasswordReset,
+        updatePassword,
         signOut,
         requestSignUp,
         clearPendingSignUp,
+        clearPasswordRecovery,
       }}
     >
       {children}

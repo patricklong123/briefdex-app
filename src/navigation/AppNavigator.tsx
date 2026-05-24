@@ -3,6 +3,7 @@ import { Modal, View } from 'react-native';
 import { useApp } from '../contexts/AppContext';
 import { OnboardingNavigator } from '../screens/onboarding/OnboardingNavigator';
 import { LoginScreen } from '../screens/LoginScreen';
+import { ResetPasswordScreen } from '../screens/ResetPasswordScreen';
 import { HomeScreen } from '../screens/HomeScreen';
 import { ProfileScreen } from '../screens/ProfileScreen';
 import { PlayerScreen } from '../screens/PlayerScreen';
@@ -22,6 +23,7 @@ export function AppNavigator() {
     session,
     authReady,
     pendingSignUp,
+    passwordRecoveryActive,
     requestSignUp,
   } = useApp();
   const [tab, setTab] = useState<Tab>('home');
@@ -45,11 +47,19 @@ export function AppNavigator() {
     'session:', session ? session.user.email : null,
     'onboardingComplete:', onboardingComplete,
     'pendingSignUp:', pendingSignUp,
+    'passwordRecoveryActive:', passwordRecoveryActive,
   );
 
   if (onboardingComplete === null || !authReady) {
     console.log('[AppNavigator] -> Loading');
     return <View style={{ flex: 1, backgroundColor: colors.g900 }} />;
+  }
+
+  // Password reset deep link opened the app — show the reset screen
+  // regardless of session / onboarding state, then route normally.
+  if (passwordRecoveryActive) {
+    console.log('[AppNavigator] -> ResetPasswordScreen');
+    return <ResetPasswordScreen />;
   }
 
   // Returning user: completed onboarding before, but no active session → standalone Login.
