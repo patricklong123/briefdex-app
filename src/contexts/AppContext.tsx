@@ -123,6 +123,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     console.log('[auth] signIn ok, session user:', data.session?.user.email);
     // Set session immediately rather than waiting on the listener.
     setSession(data.session);
+    // A successful sign-in implies a returning user who has set up before,
+    // so mark onboarding complete and clear any pending sign-up so AppNavigator
+    // routes straight to Home (even if signIn was triggered from inside
+    // OnboardingNavigator's Login route).
+    await storage.setOnboardingComplete(true);
+    setOnboardingComplete(true);
+    setPendingSignUp(false);
   }, []);
 
   const signUp = useCallback(async (email: string, password: string) => {

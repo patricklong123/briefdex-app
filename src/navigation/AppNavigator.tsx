@@ -40,19 +40,32 @@ export function AppNavigator() {
     }
   }, [openPlayerOnStart]);
 
+  console.log(
+    '[AppNavigator] render — authReady:', authReady,
+    'session:', session ? session.user.email : null,
+    'onboardingComplete:', onboardingComplete,
+    'pendingSignUp:', pendingSignUp,
+  );
+
   if (onboardingComplete === null || !authReady) {
+    console.log('[AppNavigator] -> Loading');
     return <View style={{ flex: 1, backgroundColor: colors.g900 }} />;
   }
 
   // Returning user: completed onboarding before, but no active session → standalone Login.
   if (!session && onboardingComplete && !pendingSignUp) {
+    console.log('[AppNavigator] -> Standalone Login');
     return <LoginScreen onRequestSignUp={requestSignUp} />;
   }
 
-  // First-time user, or returning user who tapped "Sign up" from Login.
+  // First-time user, or returning user who tapped "Sign up" from Login,
+  // or a freshly-signed-up user who hasn't finished the survey/paywall yet.
   if (!onboardingComplete) {
+    console.log('[AppNavigator] -> OnboardingNavigator');
     return <OnboardingNavigator initialRouteName={pendingSignUp ? 'Auth' : undefined} />;
   }
+
+  console.log('[AppNavigator] -> Main app');
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.g900 }}>
