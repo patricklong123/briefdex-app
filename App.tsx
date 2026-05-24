@@ -65,7 +65,7 @@ export default function App() {
   useEffect(() => {
     if (Platform.OS === 'ios') {
       Purchases.setLogLevel(LOG_LEVEL.VERBOSE);
-      Purchases.configure({ apiKey: 'REVENUECAT_API_KEY_PLACEHOLDER' });
+      Purchases.configure({ apiKey: 'test_WjLEAdBQwsqXZWKlcytuPqGTSMV' });
     }
   }, []);
 
