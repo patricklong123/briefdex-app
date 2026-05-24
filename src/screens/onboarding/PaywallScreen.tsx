@@ -116,6 +116,13 @@ export function PaywallScreen({ onStartTrial }: { onStartTrial: () => void }) {
             We'll send a reminder before your trial ends.
           </Text>
 
+          {/* DEV ONLY - REMOVE BEFORE SUBMISSION */}
+          {__DEV__ && (
+            <Pressable onPress={onStartTrial} hitSlop={12}>
+              <Text style={styles.devSkip}>Skip for testing →</Text>
+            </Pressable>
+          )}
+
         </ScrollView>
       </SafeAreaView>
     </ScreenBackground>
@@ -286,5 +293,15 @@ const styles = StyleSheet.create({
     color: 'rgba(255,255,255,0.2)',
     textAlign: 'center',
     lineHeight: 16,
+  },
+
+  // DEV ONLY - REMOVE BEFORE SUBMISSION
+  devSkip: {
+    fontFamily: fonts.bodySemiBold,
+    fontSize: 11,
+    color: colors.gold,
+    textAlign: 'center',
+    textDecorationLine: 'underline',
+    marginTop: spacing.sm,
   },
 });
