@@ -60,10 +60,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
+      console.log('[auth] getSession on boot, session:', data.session ? data.session.user.email : null);
       setSession(data.session);
       setAuthReady(true);
     });
-    const { data: sub } = supabase.auth.onAuthStateChange((_event, s) => {
+    const { data: sub } = supabase.auth.onAuthStateChange((event, s) => {
+      console.log('[auth] onAuthStateChange:', event, 'session:', s ? s.user.email : null);
       setSession(s);
     });
     return () => {
@@ -112,13 +114,26 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const signIn = useCallback(async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) throw error;
+    console.log('[auth] signIn called for:', email);
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) {
+      console.log('[auth] signIn error:', error.status, error.message);
+      throw error;
+    }
+    console.log('[auth] signIn ok, session user:', data.session?.user.email);
+    // Set session immediately rather than waiting on the listener.
+    setSession(data.session);
   }, []);
 
   const signUp = useCallback(async (email: string, password: string) => {
-    const { error } = await supabase.auth.signUp({ email, password });
-    if (error) throw error;
+    console.log('[auth] signUp called for:', email);
+    const { data, error } = await supabase.auth.signUp({ email, password });
+    if (error) {
+      console.log('[auth] signUp error:', error.status, error.message);
+      throw error;
+    }
+    console.log('[auth] signUp ok, session user:', data.session?.user.email);
+    if (data.session) setSession(data.session);
   }, []);
 
   const sendPasswordReset = useCallback(async (email: string) => {
