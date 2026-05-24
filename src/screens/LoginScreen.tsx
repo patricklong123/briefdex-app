@@ -9,6 +9,17 @@ interface Props {
   onRequestSignUp: () => void;
 }
 
+function friendlyAuthError(e: any, fallback = 'Could not sign in.'): string {
+  const msg: string = e?.message ?? '';
+  const status: number | undefined = e?.status;
+  if (/invalid login credentials/i.test(msg)) return 'Incorrect email or password.';
+  if (/email not confirmed/i.test(msg)) return 'Please confirm your email before logging in.';
+  if (/user already registered/i.test(msg)) return 'An account with that email already exists.';
+  if (/network|fetch|failed to fetch/i.test(msg)) return "Can't reach the server. Check your connection.";
+  if (status === 429 || /rate.?limit/i.test(msg)) return 'Too many attempts. Try again in a minute.';
+  return msg || fallback;
+}
+
 export function LoginScreen({ onRequestSignUp }: Props) {
   const { signIn, sendPasswordReset } = useApp();
   const [email, setEmail] = useState('');
@@ -18,6 +29,7 @@ export function LoginScreen({ onRequestSignUp }: Props) {
   const [resetSent, setResetSent] = useState(false);
 
   const handleLogIn = async () => {
+    console.log('[LoginScreen] handleLogIn tapped, email:', email);
     setError(null);
     setResetSent(false);
     if (!email || !password) {
@@ -27,9 +39,11 @@ export function LoginScreen({ onRequestSignUp }: Props) {
     setSubmitting(true);
     try {
       await signIn(email.trim(), password);
-      // Session listener in AppContext routes us to Home.
+      console.log('[LoginScreen] signIn resolved, AppNavigator should route to Home');
+      // AppContext sets session synchronously; AppNavigator re-renders to Home.
     } catch (e: any) {
-      setError(e?.message ?? 'Could not sign in.');
+      console.log('[LoginScreen] signIn threw:', e?.status, e?.message, e);
+      setError(friendlyAuthError(e));
     } finally {
       setSubmitting(false);
     }
@@ -47,7 +61,7 @@ export function LoginScreen({ onRequestSignUp }: Props) {
       await sendPasswordReset(email.trim());
       setResetSent(true);
     } catch (e: any) {
-      setError(e?.message ?? 'Could not send reset email.');
+      setError(friendlyAuthError(e, 'Could not send reset email.'));
     } finally {
       setSubmitting(false);
     }
