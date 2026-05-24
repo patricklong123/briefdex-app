@@ -2,6 +2,7 @@ import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { WelcomeScreen } from './WelcomeScreen';
 import { AuthScreen } from './AuthScreen';
+import { LoginScreen } from './LoginScreen';
 import { ValueScreen1 } from './ValueScreen1';
 import { ValueScreen2 } from './ValueScreen2';
 import { ValueScreen3 } from './ValueScreen3';
@@ -22,6 +23,7 @@ import { useApp } from '../../contexts/AppContext';
 export type OnboardingStackParams = {
   Welcome: undefined;
   Auth: undefined;
+  Login: undefined;
   Value1: undefined;
   Value2: undefined;
   Value3: undefined;
@@ -50,7 +52,15 @@ export function OnboardingNavigator() {
         {({ navigation }) => <WelcomeScreen onNext={() => navigation.navigate('Auth')} />}
       </Stack.Screen>
       <Stack.Screen name="Auth">
-        {({ navigation }) => <AuthScreen onNext={() => navigation.navigate('Value1')} />}
+        {({ navigation }) => (
+          <AuthScreen
+            onNext={() => navigation.navigate('Value1')}
+            onOpenLogin={() => navigation.navigate('Login')}
+          />
+        )}
+      </Stack.Screen>
+      <Stack.Screen name="Login">
+        {() => <LoginScreen onLogIn={() => completeOnboarding(true)} />}
       </Stack.Screen>
       <Stack.Screen name="Value1">
         {({ navigation }) => <ValueScreen1 onNext={() => navigation.navigate('Value2')} />}
