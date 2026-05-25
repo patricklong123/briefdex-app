@@ -35,7 +35,7 @@ export function ValueScreen4({ onNext }: { onNext: () => void }) {
 
             {/* Final chip — spans full width */}
             <View style={styles.finalChip}>
-              <Text style={styles.finalText}>🎙 Professional audio · 7:30am NZT</Text>
+              <Text style={styles.finalText}>🎙 Professional audio · 6:30am NZT</Text>
             </View>
           </View>
         </View>

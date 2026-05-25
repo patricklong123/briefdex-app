@@ -4,7 +4,7 @@ import { OnboardingLayout } from './OnboardingLayout';
 import { GoldButton } from '../../components/GoldButton';
 import { colors, fonts, radii, spacing } from '../../theme/tokens';
 
-const TAGS = ['NZ-first', 'Primary sources', 'Editor reviewed', '7:30am daily'];
+const TAGS = ['NZ-first', 'Primary sources', 'Editor reviewed', '6:30am daily'];
 const PRIVACY_URL = 'https://briefdex.com/privacy-policy.html';
 const TERMS_URL = 'https://briefdex.com/terms-of-service.html';
 

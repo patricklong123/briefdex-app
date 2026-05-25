@@ -113,7 +113,7 @@ export function FirstUseScreen({ onListen }: { onListen: () => void }) {
           </View>
 
           <Text style={styles.tip}>
-            Tomorrow at 6am, your next briefing will be waiting.
+            Tomorrow at 6:30am, your next briefing will be waiting.
           </Text>
         </View>
       </SafeAreaView>
