@@ -82,7 +82,7 @@ export function LoadingScreen({ onNext }: { onNext: () => void }) {
                 <View
                   style={[
                     styles.stepDot,
-                    state === 'done' && { backgroundColor: colors.g500, borderColor: colors.g500 },
+                    state === 'done' && { backgroundColor: colors.gold, borderColor: colors.gold },
                     state === 'active' && {
                       borderColor: colors.gold,
                       backgroundColor: colors.goldFaint,
@@ -90,7 +90,8 @@ export function LoadingScreen({ onNext }: { onNext: () => void }) {
                   ]}
                 >
                   {state === 'done' && <Text style={styles.tick}>✓</Text>}
-                  {state === 'active' && <Text style={styles.arrow}>▸</Text>}
+                  {state === 'active' && <Text style={styles.arrow}>▶</Text>}
+                  {state === 'pending' && <View style={styles.pendingDot} />}
                 </View>
                 <Text
                   style={[
@@ -113,10 +114,11 @@ export function LoadingScreen({ onNext }: { onNext: () => void }) {
 const styles = StyleSheet.create({
   center: { gap: spacing.lg, paddingHorizontal: spacing.md },
   heading: {
-    fontFamily: fonts.heading,
-    fontSize: 19,
+    fontFamily: fonts.headingBlack,
+    fontSize: 22,
     color: colors.white,
     textAlign: 'center',
+    lineHeight: 28,
   },
   track: {
     height: 3,
@@ -143,8 +145,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  tick: { color: colors.white, fontSize: 10, fontFamily: fonts.bodySemiBold },
-  arrow: { color: colors.gold, fontSize: 9, fontFamily: fonts.bodySemiBold },
+  tick: { color: '#1a1407', fontSize: 10, fontFamily: fonts.bodySemiBold },
+  arrow: { color: colors.gold, fontSize: 8, fontFamily: fonts.bodySemiBold, marginLeft: 1 },
+  pendingDot: {
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: 'rgba(255,255,255,0.18)',
+  },
   stepLabel: {
     fontFamily: fonts.body,
     fontSize: 12,
