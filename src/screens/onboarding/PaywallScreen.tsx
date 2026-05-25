@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
-import { Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import RevenueCatUI, { PAYWALL_RESULT } from 'react-native-purchases-ui';
 import { ScreenBackground } from '../../components/ScreenBackground';
 import { GoldButton } from '../../components/GoldButton';
 import { colors, fonts, radii, shadows, spacing } from '../../theme/tokens';
 import { useApp } from '../../contexts/AppContext';
+import { purchasePlan } from '../../services/subscriptionService';
 
 const TERMS_URL = 'https://briefdex.com/terms-of-service.html';
 const PRIVACY_URL = 'https://briefdex.com/privacy-policy.html';
@@ -20,11 +20,20 @@ export function PaywallScreen({ onStartTrial }: { onStartTrial: () => void }) {
   const { user } = useApp();
   const firstName = user.name.split(' ')[0];
   const [plan, setPlan] = useState<'monthly' | 'annual'>('monthly');
+  const [purchasing, setPurchasing] = useState(false);
 
   const handleStartTrial = async () => {
-    const result = await RevenueCatUI.presentPaywall();
-    if (result === PAYWALL_RESULT.PURCHASED || result === PAYWALL_RESULT.RESTORED) {
-      onStartTrial();
+    if (purchasing) return;
+    setPurchasing(true);
+    try {
+      const outcome = await purchasePlan(plan);
+      if (outcome.status === 'purchased') {
+        onStartTrial();
+      }
+    } catch (e: any) {
+      Alert.alert('Purchase failed', e?.message ?? 'Please try again.');
+    } finally {
+      setPurchasing(false);
     }
   };
 
@@ -97,8 +106,9 @@ export function PaywallScreen({ onStartTrial }: { onStartTrial: () => void }) {
 
           {/* CTA */}
           <GoldButton
-            label="Start 7-day free trial"
+            label={purchasing ? 'Processing…' : 'Start 7-day free trial'}
             onPress={handleStartTrial}
+            disabled={purchasing}
             large
             style={shadows.goldButton}
           />
