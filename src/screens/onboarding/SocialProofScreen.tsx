@@ -4,7 +4,7 @@ import { OnboardingLayout } from './OnboardingLayout';
 import { GoldButton } from '../../components/GoldButton';
 import { colors, fonts, radii, spacing } from '../../theme/tokens';
 
-const LOGOS = ['FMA', 'MAS', 'FSC', 'Chapman Tripp'];
+const LOGOS = ['FMA', 'MAS', 'FSC', 'Chapman Tripp', 'KPMG', 'PwC', 'Macquarie Bank', 'Jarden'];
 const { width: SCREEN_W } = Dimensions.get('window');
 const CARD_W = SCREEN_W - spacing.xxl * 2;
 
@@ -12,17 +12,17 @@ const QUOTES = [
   {
     id: '1',
     quote: 'Briefdex replaced 30 minutes of scrolling every morning. I show up to client meetings all ready across the market.',
-    credit: 'Private Enterprise Tester at PWC',
+    credit: 'Jarden, Asset Manager',
   },
   {
     id: '2',
     quote: 'Oh it\'s perfect, I jump on the train every morning with my headphones in and can get up to date with everything happening in the markets before I get to work.',
-    credit: 'Investment banking graduate',
+    credit: 'Macquarie, Investment Banker',
   },
   {
     id: '3',
-    quote: 'I\'ve got my notifications on Briefdex set 1 minute before my alarm goes off. Once my alarm goes off I just click the notification and the daily wrap is playing while I\'m still in bed. Speak about time maxxing.',
-    credit: 'Beta tester, Auckland',
+    quote: 'I\'ve got my notifications on Briefdex set 1 minute before my alarm goes off. Once my alarm goes off I just click the notification and the daily wrap is playing while I\'m still in bed. Talk about making the most of every morning.',
+    credit: 'Business Advisory Owner',
   },
 ];
 
