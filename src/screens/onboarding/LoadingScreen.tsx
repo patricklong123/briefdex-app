@@ -1,32 +1,39 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
+import Svg, { Circle } from 'react-native-svg';
 import Animated, {
   Easing,
-  useAnimatedStyle,
+  useAnimatedProps,
   useSharedValue,
   withTiming,
 } from 'react-native-reanimated';
-import { LinearGradient } from 'expo-linear-gradient';
 import { OnboardingLayout } from './OnboardingLayout';
-import { colors, fonts, radii, spacing } from '../../theme/tokens';
+import { colors, fonts, spacing } from '../../theme/tokens';
 
 const STATUSES = [
-  'Analysing your responses...',
-  'Confirming your delivery time...',
-  'Setting up your channels...',
-  'Configuring your smart alarm...',
-  'Preparing today\u2019s briefing...',
+  'Analysing your responses…',
+  'Confirming your delivery time…',
+  'Setting up your channels…',
+  'Preparing your first briefing…',
+  'Almost ready…',
 ];
 
 const STEPS = [
   'Analysing your responses',
   'Confirming your delivery time',
   'Setting up your channels',
-  'Configuring your smart alarm',
-  'Preparing today\u2019s briefing',
+  'Preparing your first briefing',
+  'Almost ready…',
 ];
 
 const TOTAL_MS = 6000;
+
+const RING_SIZE = 148;
+const RING_STROKE = 3;
+const RING_RADIUS = (RING_SIZE - RING_STROKE) / 2;
+const CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS;
+
+const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
 export function LoadingScreen({ onNext }: { onNext: () => void }) {
   const [statusIdx, setStatusIdx] = useState(0);
@@ -52,28 +59,49 @@ export function LoadingScreen({ onNext }: { onNext: () => void }) {
     };
   }, [progress]);
 
-  const fillStyle = useAnimatedStyle(() => ({
-    width: `${progress.value * 100}%`,
+  const animatedRingProps = useAnimatedProps(() => ({
+    strokeDashoffset: CIRCUMFERENCE * (1 - progress.value),
   }));
 
   return (
     <OnboardingLayout centered>
       <View style={styles.center}>
-        <Text style={styles.heading}>Analysing your responses...</Text>
-
-        <View style={styles.track}>
-          <Animated.View style={[styles.fillWrap, fillStyle]}>
-            <LinearGradient
-              colors={[colors.gold, colors.goldLight]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              style={styles.fill}
+        {/* Ring */}
+        <View style={styles.ringWrap}>
+          <Svg width={RING_SIZE} height={RING_SIZE}>
+            {/* Track */}
+            <Circle
+              cx={RING_SIZE / 2}
+              cy={RING_SIZE / 2}
+              r={RING_RADIUS}
+              stroke="rgba(255,255,255,0.08)"
+              strokeWidth={RING_STROKE}
+              fill="none"
             />
-          </Animated.View>
+            {/* Animated arc — starts at 12 o'clock, sweeps clockwise */}
+            <AnimatedCircle
+              cx={RING_SIZE / 2}
+              cy={RING_SIZE / 2}
+              r={RING_RADIUS}
+              stroke={colors.gold}
+              strokeWidth={RING_STROKE}
+              fill="none"
+              strokeLinecap="round"
+              strokeDasharray={CIRCUMFERENCE}
+              animatedProps={animatedRingProps}
+              transform={`rotate(-90 ${RING_SIZE / 2} ${RING_SIZE / 2})`}
+            />
+          </Svg>
+          {/* Monogram */}
+          <View style={styles.monogramWrap} pointerEvents="none">
+            <Text style={styles.monogram}>Bdx</Text>
+          </View>
         </View>
 
+        {/* Rotating status */}
         <Text style={styles.status}>{STATUSES[statusIdx]}</Text>
 
+        {/* Step list */}
         <View style={styles.steps}>
           {STEPS.map((s, i) => {
             const state = i < activeStep ? 'done' : i === activeStep ? 'active' : 'pending';
@@ -112,30 +140,46 @@ export function LoadingScreen({ onNext }: { onNext: () => void }) {
 }
 
 const styles = StyleSheet.create({
-  center: { gap: spacing.lg, paddingHorizontal: spacing.md },
-  heading: {
-    fontFamily: fonts.headingBlack,
-    fontSize: 22,
-    color: colors.white,
-    textAlign: 'center',
-    lineHeight: 28,
+  center: {
+    alignItems: 'center',
+    gap: spacing.xl,
+    paddingHorizontal: spacing.md,
   },
-  track: {
-    height: 3,
-    borderRadius: 2,
-    backgroundColor: colors.line,
-    overflow: 'hidden',
+  ringWrap: {
+    width: RING_SIZE,
+    height: RING_SIZE,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: colors.gold,
+    shadowOpacity: 0.35,
+    shadowRadius: 24,
+    shadowOffset: { width: 0, height: 0 },
+    elevation: 8,
   },
-  fillWrap: { height: 3 },
-  fill: { flex: 1, borderRadius: 2 },
+  monogramWrap: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  monogram: {
+    fontFamily: fonts.heading,
+    fontSize: 32,
+    color: colors.gold,
+    letterSpacing: 0.5,
+    lineHeight: 36,
+  },
   status: {
     fontFamily: fonts.headingItalic,
-    fontSize: 12,
-    color: 'rgba(255,255,255,0.4)',
+    fontSize: 13,
+    color: 'rgba(255,255,255,0.5)',
     textAlign: 'center',
   },
-  steps: { gap: 10, marginTop: spacing.md },
-  stepRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  steps: {
+    gap: 10,
+    marginTop: spacing.md,
+    alignSelf: 'stretch',
+  },
+  stepRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   stepDot: {
     width: 18,
     height: 18,
@@ -155,7 +199,7 @@ const styles = StyleSheet.create({
   },
   stepLabel: {
     fontFamily: fonts.body,
-    fontSize: 12,
+    fontSize: 13,
     color: colors.white,
   },
 });
