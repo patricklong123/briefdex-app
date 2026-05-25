@@ -58,7 +58,7 @@ export function ValueScreen2({ onNext }: { onNext: () => void }) {
           <Text style={styles.eyebrow}>THE COST</Text>
           <Text style={styles.heading}>What does that time cost you?</Text>
           <Text style={styles.body}>
-            38 minutes a day. 165 hours a year. Three working weeks. Gone. Reading instead of
+            38 minutes a day. 165 hours a year. Four working weeks. Gone. Reading instead of
             listening, deciding, or sleeping.
           </Text>
         </View>
