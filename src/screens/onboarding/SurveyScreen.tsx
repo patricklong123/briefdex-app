@@ -49,15 +49,15 @@ export function SurveyScreen({ step, question, options, multi, initial, onNext }
     <OnboardingLayout
       footer={<GoldButton label="Continue" onPress={submit} disabled={!canContinue} />}
     >
-      {/* Progress pips */}
+      {/* Progress pips — dots: done=gold filled, active=gold outline, pending=dim */}
       <View style={styles.pips}>
         {[1, 2, 3, 4, 5, 6].map((i) => (
           <View
             key={i}
             style={[
               styles.pip,
-              i < step && { backgroundColor: colors.gold },
-              i === step && { backgroundColor: 'rgba(201,168,76,0.5)' },
+              i < step && styles.pipDone,
+              i === step && styles.pipActive,
             ]}
           />
         ))}
@@ -90,24 +90,34 @@ export function SurveyScreen({ step, question, options, multi, initial, onNext }
 const styles = StyleSheet.create({
   pips: {
     flexDirection: 'row',
-    gap: 6,
+    gap: 8,
     marginBottom: spacing.xxl,
   },
   pip: {
-    flex: 1,
-    height: 3,
-    borderRadius: 2,
+    width: 7,
+    height: 7,
+    borderRadius: 4,
     backgroundColor: 'rgba(255,255,255,0.10)',
+  },
+  pipDone: {
+    backgroundColor: colors.gold,
+  },
+  pipActive: {
+    backgroundColor: 'transparent',
+    borderWidth: 1.5,
+    borderColor: colors.gold,
   },
   qNum: {
     fontFamily: fonts.bodyMedium,
-    fontSize: 12,
-    color: colors.textFaint,
+    fontSize: 11,
+    letterSpacing: 1.8,
+    textTransform: 'uppercase',
+    color: 'rgba(255,255,255,0.25)',
     marginBottom: spacing.sm,
   },
   question: {
-    fontFamily: fonts.heading,
-    fontSize: 20,
+    fontFamily: fonts.headingBlack,
+    fontSize: 19,
     lineHeight: 26,
     color: colors.white,
   },
