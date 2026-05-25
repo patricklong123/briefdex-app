@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import Purchases, { PurchasesPackage } from 'react-native-purchases';
 
 export type PlanKey = 'monthly' | 'annual';
@@ -6,9 +7,49 @@ export type PurchaseOutcome =
   | { status: 'purchased' }
   | { status: 'cancelled' };
 
+export type SubscriptionInfo =
+  | { status: 'active'; expirationDate: Date | null }
+  | { status: 'none' };
+
+export type SubscriptionInfoState =
+  | { state: 'loading' }
+  | { state: 'loaded'; info: SubscriptionInfo }
+  | { state: 'error'; error: string };
+
+const MONTHS = [
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December',
+];
+
+export function formatRenewalDate(date: Date): string {
+  return `${date.getDate()} ${MONTHS[date.getMonth()]} ${date.getFullYear()}`;
+}
+
 export async function checkEntitlement(): Promise<boolean> {
   const customerInfo = await Purchases.getCustomerInfo();
   return customerInfo.entitlements.active['premium'] !== undefined;
+}
+
+export async function getSubscriptionInfo(): Promise<SubscriptionInfo> {
+  const customerInfo = await Purchases.getCustomerInfo();
+  const premium = customerInfo.entitlements.active['premium'];
+  if (!premium) return { status: 'none' };
+  const expirationDate = premium.expirationDate ? new Date(premium.expirationDate) : null;
+  return { status: 'active', expirationDate };
+}
+
+export function useSubscriptionInfo(): SubscriptionInfoState {
+  const [state, setState] = useState<SubscriptionInfoState>({ state: 'loading' });
+  useEffect(() => {
+    let cancelled = false;
+    getSubscriptionInfo()
+      .then((info) => { if (!cancelled) setState({ state: 'loaded', info }); })
+      .catch((e: any) => {
+        if (!cancelled) setState({ state: 'error', error: e?.message ?? 'Failed to load subscription' });
+      });
+    return () => { cancelled = true; };
+  }, []);
+  return state;
 }
 
 async function getPackage(plan: PlanKey): Promise<PurchasesPackage> {

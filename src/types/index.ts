@@ -26,7 +26,6 @@ export interface UserProfile {
   name: string;
   email: string;
   subscriptionTier: 'free' | 'trial' | 'premium';
-  renewsOn?: string;
   stats: {
     streak: number;
     briefingsCompleted: number;
