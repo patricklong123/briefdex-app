@@ -17,7 +17,7 @@ const QUOTES = [
   {
     id: '2',
     quote: 'Oh it\'s perfect, I jump on the train every morning with my headphones in and can get up to date with everything happening in the markets before I get to work.',
-    credit: 'Macquarie investment banker',
+    credit: 'Investment banking graduate',
   },
   {
     id: '3',
