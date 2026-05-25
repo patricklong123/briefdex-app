@@ -50,7 +50,7 @@ export function ValueScreen3({ onNext }: { onNext: () => void }) {
           {/* Content inside the visual — sits at the bottom */}
           <View style={styles.visualContent}>
             <Text style={styles.headphones}>🎧</Text>
-            <Text style={styles.time}>7:00 AM</Text>
+            <Text style={styles.time}>6:30 AM</Text>
             <Text style={styles.play}>▶ Today's Daily Wrap</Text>
           </View>
         </View>
