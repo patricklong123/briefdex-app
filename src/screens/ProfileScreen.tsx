@@ -27,6 +27,14 @@ interface Props {
   onOpenSettings: () => void;
 }
 
+function getInitials(name: string): string {
+  if (!name) return '';
+  const parts = name.split(/[\s._-]+/).filter(Boolean);
+  if (parts.length === 0) return name.charAt(0).toUpperCase();
+  if (parts.length === 1) return parts[0].charAt(0).toUpperCase();
+  return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
+}
+
 export function ProfileScreen({
   onOpenHome,
   onOpenPlayer,
@@ -37,7 +45,7 @@ export function ProfileScreen({
   const { user, resetAll } = useApp();
   const player = useAudioPlayer();
   const stats = useStats();
-  const initial = user.name.charAt(0);
+  const initials = getInitials(user.name);
   const pagesDigestedLabel = String(Math.round(stats.pagesDigested));
 
   return (
@@ -66,24 +74,24 @@ export function ProfileScreen({
                 style={StyleSheet.absoluteFillObject as any}
               />
 
-              {/* Identity */}
-              <View style={styles.identityRow}>
+              {/* Identity — avatar centred top, name + email below */}
+              <View style={styles.identityCol}>
+                <View style={styles.premiumBadgeAnchor}>
+                  <View style={styles.premiumBadge}>
+                    <View style={styles.premiumDot} />
+                    <Text style={styles.premiumText}>PREMIUM</Text>
+                  </View>
+                </View>
                 <LinearGradient
                   colors={[colors.goldLight, colors.gold]}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 1 }}
                   style={styles.avatar}
                 >
-                  <Text style={styles.avatarLetter}>{initial}</Text>
+                  <Text style={styles.avatarLetter}>{initials}</Text>
                 </LinearGradient>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.name}>{user.name}</Text>
-                  <Text style={styles.email}>{user.email}</Text>
-                </View>
-                <View style={styles.premiumBadge}>
-                  <View style={styles.premiumDot} />
-                  <Text style={styles.premiumText}>PREMIUM</Text>
-                </View>
+                <Text style={styles.name}>{user.name}</Text>
+                {!!user.email && <Text style={styles.email}>{user.email}</Text>}
               </View>
 
               {/* Stats */}
@@ -239,33 +247,40 @@ const styles = StyleSheet.create({
     padding: spacing.xl,
     overflow: 'hidden',
   },
-  identityRow: {
-    flexDirection: 'row',
+  identityCol: {
     alignItems: 'center',
-    gap: 14,
+    gap: 8,
+  },
+  premiumBadgeAnchor: {
+    width: '100%',
+    alignItems: 'flex-end',
   },
   avatar: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    width: 72,
+    height: 72,
+    borderRadius: 36,
     alignItems: 'center',
     justifyContent: 'center',
   },
   avatarLetter: {
-    fontFamily: fonts.heading,
-    fontSize: 22,
+    fontFamily: fonts.headingBlack,
+    fontSize: 26,
     color: '#1a1407',
+    letterSpacing: 0.5,
   },
   name: {
-    fontFamily: fonts.heading,
-    fontSize: 18,
+    fontFamily: fonts.headingBlack,
+    fontSize: 20,
     color: colors.white,
+    marginTop: 4,
+    textAlign: 'center',
   },
   email: {
     fontFamily: fonts.body,
-    fontSize: 11,
+    fontSize: 12,
     color: colors.textDim,
     marginTop: 2,
+    textAlign: 'center',
   },
   premiumBadge: {
     flexDirection: 'row',
