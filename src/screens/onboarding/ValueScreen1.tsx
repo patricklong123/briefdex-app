@@ -6,16 +6,16 @@ import { GoldButton } from '../../components/GoldButton';
 import { colors, fonts, radii, spacing } from '../../theme/tokens';
 
 const SOURCES: { name: string; color: string }[] = [
-  { name: 'NZX Announce...', color: colors.g500 },
-  { name: 'RBNZ Statement', color: colors.gold },
-  { name: 'Bloomberg', color: colors.blue },
+  { name: 'NZX Announcements', color: colors.g500 },
+  { name: 'RBNZ Releases', color: colors.gold },
   { name: 'Stats NZ Data', color: colors.g500 },
-  { name: 'ASX Close', color: colors.gold },
-  { name: 'RBA Decision', color: colors.blue },
+  { name: 'ASX Announcements', color: colors.gold },
+  { name: 'Beehive Press', color: colors.gold },
+  { name: 'RBA Decisions', color: colors.blue },
+  { name: 'Yahoo Finance', color: colors.blue },
   { name: 'GDT Dairy', color: colors.g500 },
-  { name: 'Beehive', color: colors.gold },
-  { name: 'CME Futures', color: colors.blue },
   { name: 'EIA Energy', color: colors.red },
+  { name: 'ABS Data', color: colors.g500 },
 ];
 
 export function ValueScreen1({ onNext }: { onNext: () => void }) {
@@ -40,7 +40,7 @@ export function ValueScreen1({ onNext }: { onNext: () => void }) {
           <Text style={styles.eyebrow}>THE PROBLEM</Text>
           <Text style={styles.heading}>You're drowning in finance news.</Text>
           <Text style={styles.body}>
-            NZX announcements. RBNZ releases. Stats NZ data. Bloomberg. RBA. Every morning,
+            NZX announcements. RBNZ releases. Stats NZ data. Yahoo Finance. RBA. Every morning,
             scattered across sources. By the time you've caught up, the market is already open.
           </Text>
         </View>

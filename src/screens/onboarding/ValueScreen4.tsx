@@ -9,7 +9,7 @@ const SOURCES = [
   { abbr: 'NZX',  name: 'Announcements' },
   { abbr: 'RBNZ', name: 'Releases & OCR' },
   { abbr: 'SNZ',  name: 'Stats NZ Data' },
-  { abbr: 'BBG',  name: 'Bloomberg' },
+  { abbr: 'ASX',  name: 'Announcements' },
 ];
 
 export function ValueScreen4({ onNext }: { onNext: () => void }) {
@@ -45,7 +45,7 @@ export function ValueScreen4({ onNext }: { onNext: () => void }) {
           <Text style={styles.eyebrow}>THE METHOD</Text>
           <Text style={styles.heading}>Built on primary sources only.</Text>
           <Text style={styles.body}>
-            No summarised journalism. Direct from NZX, RBNZ, Stats NZ, and Bloomberg.
+            No summarised journalism. Direct from NZX, RBNZ, Stats NZ, and ASX.
             AI scripted. Editor reviewed. Voice generated.
           </Text>
         </View>
