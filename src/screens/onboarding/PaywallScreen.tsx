@@ -136,12 +136,12 @@ export function PaywallScreen({ onStartTrial }: { onStartTrial: () => void }) {
             .
           </Text>
 
-          {/* DEV ONLY - REMOVE BEFORE SUBMISSION */}
-          {__DEV__ && (
+          {/* HIDDEN FOR APP STORE SCREENSHOTS — uncomment before next dev session */}
+          {/* {__DEV__ && (
             <Pressable onPress={onStartTrial} hitSlop={12}>
               <Text style={styles.devSkip}>Skip for testing →</Text>
             </Pressable>
-          )}
+          )} */}
 
         </ScrollView>
       </SafeAreaView>

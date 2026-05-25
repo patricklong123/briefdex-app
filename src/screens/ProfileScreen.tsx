@@ -159,8 +159,8 @@ export function ProfileScreen({
             <Text style={styles.logoutText}>Log out</Text>
           </Pressable>
 
-          {/* TODO: remove before App Store submission */}
-          {__DEV__ && (
+          {/* HIDDEN FOR APP STORE SCREENSHOTS — uncomment before next dev session */}
+          {/* {__DEV__ && (
             <Pressable
               onPress={() =>
                 Alert.alert(
@@ -177,7 +177,7 @@ export function ProfileScreen({
               <Text style={styles.devBadge}>DEV ONLY</Text>
               <Text style={styles.devButtonText}>Reset Onboarding</Text>
             </Pressable>
-          )}
+          )} */}
 
           <Text style={styles.version}>Briefdex v1.0 · MVP · May 2026</Text>
         </ScrollView>
