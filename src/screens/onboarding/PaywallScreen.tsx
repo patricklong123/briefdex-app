@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import RevenueCatUI, { PAYWALL_RESULT } from 'react-native-purchases-ui';
@@ -16,9 +16,7 @@ const TRUST_PILLS = [
 export function PaywallScreen({ onStartTrial }: { onStartTrial: () => void }) {
   const { user } = useApp();
   const firstName = user.name.split(' ')[0];
-  const heading = firstName
-    ? `Your briefing is ready, ${firstName}.`
-    : 'Your briefing is ready.';
+  const [plan, setPlan] = useState<'monthly' | 'annual'>('monthly');
 
   const handleStartTrial = async () => {
     const result = await RevenueCatUI.presentPaywall();
@@ -37,7 +35,9 @@ export function PaywallScreen({ onStartTrial }: { onStartTrial: () => void }) {
         >
 
           {/* Heading */}
-          <Text style={styles.heading}>{heading}</Text>
+          <Text style={styles.heading}>
+            Your Daily Wrap and all channels are ready, {firstName}.
+          </Text>
           <Text style={styles.sub}>Unlock everything with 7 days free.</Text>
 
           {/* Trust pills */}
@@ -50,19 +50,55 @@ export function PaywallScreen({ onStartTrial }: { onStartTrial: () => void }) {
             ))}
           </View>
 
-          {/* CTA + pricing block */}
-          <View style={styles.ctaBlock}>
-            <GoldButton
-              label="Start 7-day free trial"
-              onPress={handleStartTrial}
-              large
-              style={shadows.goldButton}
-            />
-            <Text style={styles.priceLine}>then $19.99 NZD / month</Text>
-            <Pressable onPress={handleStartTrial} hitSlop={6}>
-              <Text style={styles.annualLine}>or save 33% — $169.99/year</Text>
+          {/* Price card */}
+          <View style={styles.priceCard}>
+            {/* Monthly option */}
+            <Pressable
+              onPress={() => setPlan('monthly')}
+              style={[styles.planRow, plan === 'monthly' && styles.planRowActive]}
+            >
+              <View style={[styles.planRadio, plan === 'monthly' && styles.planRadioActive]}>
+                {plan === 'monthly' && <View style={styles.planRadioDot} />}
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.priceAmount}>
+                  $19.99{' '}
+                  <Text style={styles.priceCurrency}>NZD / mo</Text>
+                </Text>
+                <Text style={styles.pricePeriod}>billed monthly after free trial</Text>
+              </View>
+            </Pressable>
+
+            <View style={styles.priceDivider} />
+
+            {/* Annual option */}
+            <Pressable
+              onPress={() => setPlan('annual')}
+              style={[styles.planRow, plan === 'annual' && styles.planRowActive]}
+            >
+              <View style={[styles.planRadio, plan === 'annual' && styles.planRadioActive]}>
+                {plan === 'annual' && <View style={styles.planRadioDot} />}
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.priceAnnualAmount}>
+                  $169.99{' '}
+                  <Text style={styles.priceCurrency}>NZD / yr</Text>
+                </Text>
+                <Text style={styles.priceAnnualSave}>Save 33% — $14.17 / month</Text>
+              </View>
+              <View style={styles.saveBadge}>
+                <Text style={styles.saveBadgeText}>BEST VALUE</Text>
+              </View>
             </Pressable>
           </View>
+
+          {/* CTA */}
+          <GoldButton
+            label="Start 7-day free trial"
+            onPress={handleStartTrial}
+            large
+            style={shadows.goldButton}
+          />
 
           {/* Dev annotation */}
           {__DEV__ && (
@@ -98,24 +134,22 @@ const styles = StyleSheet.create({
   scroll: {
     flexGrow: 1,
     justifyContent: 'center',
-    paddingTop: spacing.sm,
     paddingHorizontal: spacing.xxl,
-    paddingBottom: spacing.xxxxl,
-    gap: spacing.xl,
+    paddingVertical: spacing.xxl,
+    gap: spacing.lg,
   },
 
   // Heading
   heading: {
-    fontFamily: fonts.headingBlack,
-    fontSize: 26,
+    fontFamily: fonts.heading,
+    fontSize: 22,
     color: colors.white,
-    lineHeight: 32,
+    lineHeight: 30,
   },
   sub: {
     fontFamily: fonts.bodyLight,
     fontSize: 14,
     color: colors.textDim,
-    lineHeight: 22,
   },
 
   // Trust pills
@@ -129,40 +163,107 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.08)',
     borderRadius: radii.md,
-    paddingVertical: 12,
+    paddingVertical: 10,
     paddingHorizontal: 6,
     alignItems: 'center',
-    gap: 6,
+    gap: 4,
   },
   trustIcon: {
-    fontSize: 16,
+    fontSize: 14,
     color: colors.gold,
   },
   trustText: {
     fontFamily: fonts.body,
     fontSize: 10,
-    color: 'rgba(255,255,255,0.5)',
+    color: 'rgba(255,255,255,0.45)',
     textAlign: 'center',
     lineHeight: 15,
   },
 
-  // CTA + pricing block
-  ctaBlock: {
-    gap: spacing.md,
-    alignItems: 'stretch',
+  // Price card
+  priceCard: {
+    backgroundColor: 'rgba(201,168,76,0.07)',
+    borderWidth: 1,
+    borderColor: 'rgba(201,168,76,0.3)',
+    borderRadius: radii.xl,
+    overflow: 'hidden',
   },
-  priceLine: {
+  planRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    padding: spacing.lg,
+  },
+  planRowActive: {
+    backgroundColor: 'rgba(201,168,76,0.07)',
+  },
+  planRadio: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    borderWidth: 1.5,
+    borderColor: colors.textFaint,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  planRadioActive: {
+    borderColor: colors.gold,
+  },
+  planRadioDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: colors.gold,
+  },
+  priceAmount: {
+    fontFamily: fonts.headingBlack,
+    fontSize: 28,
+    color: colors.white,
+    lineHeight: 32,
+  },
+  priceCurrency: {
+    fontFamily: fonts.bodyLight,
+    fontSize: 13,
+    color: 'rgba(255,255,255,0.4)',
+  },
+  pricePeriod: {
+    fontFamily: fonts.body,
+    fontSize: 11,
+    color: 'rgba(255,255,255,0.35)',
+    marginTop: 2,
+  },
+  priceDivider: {
+    height: 1,
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    marginHorizontal: spacing.lg,
+  },
+  priceAnnualAmount: {
+    fontFamily: fonts.headingBlack,
+    fontSize: 28,
+    color: colors.white,
+    lineHeight: 32,
+  },
+  priceAnnualSave: {
     fontFamily: fonts.bodyMedium,
-    fontSize: 13,
-    color: 'rgba(255,255,255,0.5)',
-    textAlign: 'center',
+    fontSize: 11,
+    color: colors.goldLight,
+    marginTop: 2,
   },
-  annualLine: {
+  saveBadge: {
+    backgroundColor: 'rgba(201,168,76,0.15)',
+    borderWidth: 1,
+    borderColor: 'rgba(201,168,76,0.35)',
+    borderRadius: radii.sm,
+    paddingHorizontal: 6,
+    paddingVertical: 3,
+    flexShrink: 0,
+  },
+  saveBadgeText: {
     fontFamily: fonts.bodySemiBold,
-    fontSize: 13,
+    fontSize: 8,
     color: colors.gold,
-    textAlign: 'center',
-    marginTop: -spacing.xs,
+    letterSpacing: 0.8,
   },
 
   // Dev annotation
@@ -189,7 +290,7 @@ const styles = StyleSheet.create({
   legal: {
     fontFamily: fonts.body,
     fontSize: 10,
-    color: 'rgba(255,255,255,0.25)',
+    color: 'rgba(255,255,255,0.2)',
     textAlign: 'center',
     lineHeight: 16,
   },
