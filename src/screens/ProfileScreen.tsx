@@ -8,6 +8,7 @@ import { BottomNav } from '../components/BottomNav';
 import { useApp } from '../contexts/AppContext';
 import { useAudioPlayer } from '../hooks/useAudioPlayer';
 import { useStats } from '../hooks/useStats';
+import { formatRenewalDate, useSubscriptionInfo } from '../services/subscriptionService';
 import {
   BellIcon,
   BookIcon,
@@ -45,8 +46,22 @@ export function ProfileScreen({
   const { user, resetAll } = useApp();
   const player = useAudioPlayer();
   const stats = useStats();
+  const subInfo = useSubscriptionInfo();
   const initials = getInitials(user.name);
   const pagesDigestedLabel = String(Math.round(stats.pagesDigested));
+
+  let subscriptionSubtitle: string;
+  if (subInfo.state === 'loading') {
+    subscriptionSubtitle = 'Premium';
+  } else if (subInfo.state === 'error') {
+    subscriptionSubtitle = 'Premium';
+  } else if (subInfo.info.status === 'none') {
+    subscriptionSubtitle = 'No active subscription';
+  } else if (!subInfo.info.expirationDate) {
+    subscriptionSubtitle = 'Premium';
+  } else {
+    subscriptionSubtitle = `Premium · Renews ${formatRenewalDate(subInfo.info.expirationDate)}`;
+  }
 
   return (
     <ScreenBackground>
@@ -127,7 +142,7 @@ export function ProfileScreen({
             <MenuItem
               icon={<CardIcon />}
               label="Subscription"
-              subtitle={`Premium · Renews ${user.renewsOn}`}
+              subtitle={subscriptionSubtitle}
               onPress={onOpenSubscription}
             />
             <MenuItem

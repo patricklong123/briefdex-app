@@ -1,11 +1,14 @@
 import React, { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import RevenueCatUI, { PAYWALL_RESULT } from 'react-native-purchases-ui';
 import { ScreenBackground } from '../../components/ScreenBackground';
 import { GoldButton } from '../../components/GoldButton';
 import { colors, fonts, radii, shadows, spacing } from '../../theme/tokens';
 import { useApp } from '../../contexts/AppContext';
+import { purchasePlan } from '../../services/subscriptionService';
+
+const TERMS_URL = 'https://briefdex.com/terms-of-service.html';
+const PRIVACY_URL = 'https://briefdex.com/privacy-policy.html';
 
 const TRUST_PILLS = [
   { icon: '🔒', label: 'No charges\nuntil day 7' },
@@ -17,11 +20,20 @@ export function PaywallScreen({ onStartTrial }: { onStartTrial: () => void }) {
   const { user } = useApp();
   const firstName = user.name.split(' ')[0];
   const [plan, setPlan] = useState<'monthly' | 'annual'>('monthly');
+  const [purchasing, setPurchasing] = useState(false);
 
   const handleStartTrial = async () => {
-    const result = await RevenueCatUI.presentPaywall();
-    if (result === PAYWALL_RESULT.PURCHASED || result === PAYWALL_RESULT.RESTORED) {
-      onStartTrial();
+    if (purchasing) return;
+    setPurchasing(true);
+    try {
+      const outcome = await purchasePlan(plan);
+      if (outcome.status === 'purchased') {
+        onStartTrial();
+      }
+    } catch (e: any) {
+      Alert.alert('Purchase failed', e?.message ?? 'Please try again.');
+    } finally {
+      setPurchasing(false);
     }
   };
 
@@ -50,52 +62,53 @@ export function PaywallScreen({ onStartTrial }: { onStartTrial: () => void }) {
             ))}
           </View>
 
-          {/* Price card */}
-          <View style={styles.priceCard}>
-            {/* Monthly option */}
+          {/* Plan cards */}
+          <View style={styles.plansContainer}>
+            {/* Monthly card */}
             <Pressable
               onPress={() => setPlan('monthly')}
-              style={[styles.planRow, plan === 'monthly' && styles.planRowActive]}
+              style={[styles.planCard, plan === 'monthly' && styles.planCardActive]}
             >
-              <View style={[styles.planRadio, plan === 'monthly' && styles.planRadioActive]}>
-                {plan === 'monthly' && <View style={styles.planRadioDot} />}
+              <View style={styles.planCardHeader}>
+                <View style={[styles.planRadio, plan === 'monthly' && styles.planRadioActive]}>
+                  {plan === 'monthly' && <View style={styles.planRadioDot} />}
+                </View>
+                <Text style={styles.planLabel}>Monthly</Text>
               </View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.priceAmount}>
-                  $19.99{' '}
-                  <Text style={styles.priceCurrency}>NZD / mo</Text>
-                </Text>
-                <Text style={styles.pricePeriod}>billed monthly after free trial</Text>
-              </View>
+              <Text style={styles.priceAmount}>
+                $19.99{' '}
+                <Text style={styles.priceCurrency}>NZD / mo</Text>
+              </Text>
+              <Text style={styles.pricePeriod}>billed monthly after free trial</Text>
             </Pressable>
 
-            <View style={styles.priceDivider} />
-
-            {/* Annual option */}
+            {/* Annual card */}
             <Pressable
               onPress={() => setPlan('annual')}
-              style={[styles.planRow, plan === 'annual' && styles.planRowActive]}
+              style={[styles.planCard, plan === 'annual' && styles.planCardActive]}
             >
-              <View style={[styles.planRadio, plan === 'annual' && styles.planRadioActive]}>
-                {plan === 'annual' && <View style={styles.planRadioDot} />}
+              <View style={styles.bestValueBadge}>
+                <Text style={styles.bestValueText}>BEST VALUE</Text>
               </View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.priceAnnualAmount}>
-                  $169.99{' '}
-                  <Text style={styles.priceCurrency}>NZD / yr</Text>
-                </Text>
-                <Text style={styles.priceAnnualSave}>Save 33% — $14.17 / month</Text>
+              <View style={styles.planCardHeader}>
+                <View style={[styles.planRadio, plan === 'annual' && styles.planRadioActive]}>
+                  {plan === 'annual' && <View style={styles.planRadioDot} />}
+                </View>
+                <Text style={styles.planLabel}>Annual</Text>
               </View>
-              <View style={styles.saveBadge}>
-                <Text style={styles.saveBadgeText}>BEST VALUE</Text>
-              </View>
+              <Text style={styles.priceAmount}>
+                $169.99{' '}
+                <Text style={styles.priceCurrency}>NZD / yr</Text>
+              </Text>
+              <Text style={styles.priceAnnualSave}>Save 33% — $14.17 / month</Text>
             </Pressable>
           </View>
 
           {/* CTA */}
           <GoldButton
-            label="Start 7-day free trial"
+            label={purchasing ? 'Processing…' : 'Start 7-day free trial'}
             onPress={handleStartTrial}
+            disabled={purchasing}
             large
             style={shadows.goldButton}
           />
@@ -112,8 +125,15 @@ export function PaywallScreen({ onStartTrial }: { onStartTrial: () => void }) {
 
           {/* Legal */}
           <Text style={styles.legal}>
-            By starting your trial, you agree to our Terms and Privacy Policy.{'\n'}
-            We'll send a reminder before your trial ends.
+            By starting your trial, you agree to our{' '}
+            <Text style={styles.legalLink} onPress={() => Linking.openURL(TERMS_URL)}>
+              Terms of Service
+            </Text>
+            {' '}and{' '}
+            <Text style={styles.legalLink} onPress={() => Linking.openURL(PRIVACY_URL)}>
+              Privacy Policy
+            </Text>
+            .
           </Text>
 
           {/* DEV ONLY - REMOVE BEFORE SUBMISSION */}
@@ -180,22 +200,35 @@ const styles = StyleSheet.create({
     lineHeight: 15,
   },
 
-  // Price card
-  priceCard: {
-    backgroundColor: 'rgba(201,168,76,0.07)',
-    borderWidth: 1,
+  // Plan cards
+  plansContainer: {
+    gap: spacing.md,
+  },
+  planCard: {
+    backgroundColor: 'rgba(201,168,76,0.05)',
+    borderWidth: 1.5,
     borderColor: 'rgba(201,168,76,0.3)',
     borderRadius: radii.xl,
-    overflow: 'hidden',
+    padding: spacing.lg,
+    position: 'relative',
   },
-  planRow: {
+  planCardActive: {
+    backgroundColor: 'rgba(201,168,76,0.12)',
+    borderColor: colors.gold,
+    borderWidth: 2,
+  },
+  planCardHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    padding: spacing.lg,
+    gap: 10,
+    marginBottom: spacing.sm,
   },
-  planRowActive: {
-    backgroundColor: 'rgba(201,168,76,0.07)',
+  planLabel: {
+    fontFamily: fonts.bodySemiBold,
+    fontSize: 12,
+    color: colors.textDim,
+    letterSpacing: 1,
+    textTransform: 'uppercase',
   },
   planRadio: {
     width: 18,
@@ -233,37 +266,26 @@ const styles = StyleSheet.create({
     color: 'rgba(255,255,255,0.35)',
     marginTop: 2,
   },
-  priceDivider: {
-    height: 1,
-    backgroundColor: 'rgba(255,255,255,0.06)',
-    marginHorizontal: spacing.lg,
-  },
-  priceAnnualAmount: {
-    fontFamily: fonts.headingBlack,
-    fontSize: 28,
-    color: colors.white,
-    lineHeight: 32,
-  },
   priceAnnualSave: {
     fontFamily: fonts.bodyMedium,
     fontSize: 11,
     color: colors.goldLight,
     marginTop: 2,
   },
-  saveBadge: {
-    backgroundColor: 'rgba(201,168,76,0.15)',
-    borderWidth: 1,
-    borderColor: 'rgba(201,168,76,0.35)',
+  bestValueBadge: {
+    position: 'absolute',
+    top: -9,
+    right: spacing.lg,
+    backgroundColor: colors.gold,
     borderRadius: radii.sm,
-    paddingHorizontal: 6,
+    paddingHorizontal: 8,
     paddingVertical: 3,
-    flexShrink: 0,
   },
-  saveBadgeText: {
+  bestValueText: {
     fontFamily: fonts.bodySemiBold,
-    fontSize: 8,
-    color: colors.gold,
-    letterSpacing: 0.8,
+    fontSize: 9,
+    color: colors.g900,
+    letterSpacing: 1,
   },
 
   // Dev annotation
@@ -289,10 +311,15 @@ const styles = StyleSheet.create({
   // Legal
   legal: {
     fontFamily: fonts.body,
-    fontSize: 10,
-    color: 'rgba(255,255,255,0.2)',
+    fontSize: 11,
+    color: 'rgba(255,255,255,0.35)',
     textAlign: 'center',
-    lineHeight: 16,
+    lineHeight: 17,
+  },
+  legalLink: {
+    fontFamily: fonts.bodyMedium,
+    color: colors.gold,
+    textDecorationLine: 'underline',
   },
 
   // DEV ONLY - REMOVE BEFORE SUBMISSION

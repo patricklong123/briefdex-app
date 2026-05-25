@@ -16,27 +16,17 @@ import { GoldButton } from '../components/GoldButton';
 import { PulsingDot } from '../components/PulsingDot';
 import { ChevronLeftIcon, ChevronRightIcon, CheckIcon } from '../components/Icons';
 import { colors, fonts, radii, shadows, spacing } from '../theme/tokens';
-import { useApp } from '../contexts/AppContext';
+import {
+  formatRenewalDate,
+  SubscriptionInfoState,
+  useSubscriptionInfo,
+} from '../services/subscriptionService';
 
 const APPLE_SUBSCRIPTIONS_URL = 'https://apps.apple.com/account/subscriptions';
 
 interface Props {
   onBack: () => void;
   onOpenAnnual: () => void;
-}
-
-const MONTHS = [
-  'January', 'February', 'March', 'April', 'May', 'June',
-  'July', 'August', 'September', 'October', 'November', 'December',
-];
-
-function parseRenewsOn(s: string | undefined): Date | null {
-  if (!s) return null;
-  const m = s.match(/^(\d{1,2})\s+(\w+)\s+(\d{4})$/);
-  if (!m) return null;
-  const monthIdx = MONTHS.indexOf(m[2]);
-  if (monthIdx < 0) return null;
-  return new Date(Number(m[3]), monthIdx, Number(m[1]));
 }
 
 function daysUntil(target: Date): number {
@@ -52,36 +42,47 @@ interface RenewalDisplay {
   warn: boolean;
 }
 
-function renewalDisplay(renewsOn: string | undefined): RenewalDisplay {
-  const target = parseRenewsOn(renewsOn);
-  if (!target) {
-    return { text: renewsOn ? `Renews ${renewsOn}` : 'Renewal date unavailable', color: colors.textDim, warn: false };
+function renewalDisplay(state: SubscriptionInfoState): RenewalDisplay {
+  if (state.state === 'loading') {
+    return { text: 'Loading…', color: colors.textDim, warn: false };
   }
+  if (state.state === 'error') {
+    return { text: 'Renewal date unavailable', color: colors.textDim, warn: false };
+  }
+  const { info } = state;
+  if (info.status === 'none') {
+    return { text: 'No active subscription', color: colors.textDim, warn: false };
+  }
+  if (!info.expirationDate) {
+    return { text: 'No renewal date', color: colors.textDim, warn: false };
+  }
+  const target = info.expirationDate;
   const days = daysUntil(target);
+  const dateStr = formatRenewalDate(target);
   if (days === 0) {
     return { text: 'Renews today', color: colors.gold, warn: false };
   }
   if (days < 0) {
-    return { text: `Renewed ${renewsOn}`, color: colors.textDim, warn: false };
+    return { text: `Renewed ${dateStr}`, color: colors.textDim, warn: false };
   }
   const dayWord = days === 1 ? 'day' : 'days';
   if (days <= 7) {
     return {
-      text: `⚠ Renews in ${days} ${dayWord} · ${renewsOn}`,
+      text: `⚠ Renews in ${days} ${dayWord} · ${dateStr}`,
       color: colors.gold,
       warn: true,
     };
   }
   return {
-    text: `Renews in ${days} ${dayWord} · ${renewsOn}`,
+    text: `Renews in ${days} ${dayWord} · ${dateStr}`,
     color: colors.textDim,
     warn: false,
   };
 }
 
 export function SubscriptionScreen({ onBack, onOpenAnnual }: Props) {
-  const { user } = useApp();
-  const renewal = renewalDisplay(user.renewsOn);
+  const subInfo = useSubscriptionInfo();
+  const renewal = renewalDisplay(subInfo);
   const [restoring, setRestoring] = useState(false);
 
   const openAppleSubscriptions = () => {
