@@ -53,45 +53,45 @@ export function PaywallScreen({ onStartTrial }: { onStartTrial: () => void }) {
             ))}
           </View>
 
-          {/* Price card */}
-          <View style={styles.priceCard}>
-            {/* Monthly option */}
+          {/* Plan cards */}
+          <View style={styles.plansContainer}>
+            {/* Monthly card */}
             <Pressable
               onPress={() => setPlan('monthly')}
-              style={[styles.planRow, plan === 'monthly' && styles.planRowActive]}
+              style={[styles.planCard, plan === 'monthly' && styles.planCardActive]}
             >
-              <View style={[styles.planRadio, plan === 'monthly' && styles.planRadioActive]}>
-                {plan === 'monthly' && <View style={styles.planRadioDot} />}
+              <View style={styles.planCardHeader}>
+                <View style={[styles.planRadio, plan === 'monthly' && styles.planRadioActive]}>
+                  {plan === 'monthly' && <View style={styles.planRadioDot} />}
+                </View>
+                <Text style={styles.planLabel}>Monthly</Text>
               </View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.priceAmount}>
-                  $19.99{' '}
-                  <Text style={styles.priceCurrency}>NZD / mo</Text>
-                </Text>
-                <Text style={styles.pricePeriod}>billed monthly after free trial</Text>
-              </View>
+              <Text style={styles.priceAmount}>
+                $19.99{' '}
+                <Text style={styles.priceCurrency}>NZD / mo</Text>
+              </Text>
+              <Text style={styles.pricePeriod}>billed monthly after free trial</Text>
             </Pressable>
 
-            <View style={styles.priceDivider} />
-
-            {/* Annual option */}
+            {/* Annual card */}
             <Pressable
               onPress={() => setPlan('annual')}
-              style={[styles.planRow, plan === 'annual' && styles.planRowActive]}
+              style={[styles.planCard, plan === 'annual' && styles.planCardActive]}
             >
-              <View style={[styles.planRadio, plan === 'annual' && styles.planRadioActive]}>
-                {plan === 'annual' && <View style={styles.planRadioDot} />}
+              <View style={styles.bestValueBadge}>
+                <Text style={styles.bestValueText}>BEST VALUE</Text>
               </View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.priceAnnualAmount}>
-                  $169.99{' '}
-                  <Text style={styles.priceCurrency}>NZD / yr</Text>
-                </Text>
-                <Text style={styles.priceAnnualSave}>Save 33% — $14.17 / month</Text>
+              <View style={styles.planCardHeader}>
+                <View style={[styles.planRadio, plan === 'annual' && styles.planRadioActive]}>
+                  {plan === 'annual' && <View style={styles.planRadioDot} />}
+                </View>
+                <Text style={styles.planLabel}>Annual</Text>
               </View>
-              <View style={styles.saveBadge}>
-                <Text style={styles.saveBadgeText}>BEST VALUE</Text>
-              </View>
+              <Text style={styles.priceAmount}>
+                $169.99{' '}
+                <Text style={styles.priceCurrency}>NZD / yr</Text>
+              </Text>
+              <Text style={styles.priceAnnualSave}>Save 33% — $14.17 / month</Text>
             </Pressable>
           </View>
 
@@ -190,22 +190,35 @@ const styles = StyleSheet.create({
     lineHeight: 15,
   },
 
-  // Price card
-  priceCard: {
-    backgroundColor: 'rgba(201,168,76,0.07)',
-    borderWidth: 1,
+  // Plan cards
+  plansContainer: {
+    gap: spacing.md,
+  },
+  planCard: {
+    backgroundColor: 'rgba(201,168,76,0.05)',
+    borderWidth: 1.5,
     borderColor: 'rgba(201,168,76,0.3)',
     borderRadius: radii.xl,
-    overflow: 'hidden',
+    padding: spacing.lg,
+    position: 'relative',
   },
-  planRow: {
+  planCardActive: {
+    backgroundColor: 'rgba(201,168,76,0.12)',
+    borderColor: colors.gold,
+    borderWidth: 2,
+  },
+  planCardHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    padding: spacing.lg,
+    gap: 10,
+    marginBottom: spacing.sm,
   },
-  planRowActive: {
-    backgroundColor: 'rgba(201,168,76,0.07)',
+  planLabel: {
+    fontFamily: fonts.bodySemiBold,
+    fontSize: 12,
+    color: colors.textDim,
+    letterSpacing: 1,
+    textTransform: 'uppercase',
   },
   planRadio: {
     width: 18,
@@ -243,37 +256,26 @@ const styles = StyleSheet.create({
     color: 'rgba(255,255,255,0.35)',
     marginTop: 2,
   },
-  priceDivider: {
-    height: 1,
-    backgroundColor: 'rgba(255,255,255,0.06)',
-    marginHorizontal: spacing.lg,
-  },
-  priceAnnualAmount: {
-    fontFamily: fonts.headingBlack,
-    fontSize: 28,
-    color: colors.white,
-    lineHeight: 32,
-  },
   priceAnnualSave: {
     fontFamily: fonts.bodyMedium,
     fontSize: 11,
     color: colors.goldLight,
     marginTop: 2,
   },
-  saveBadge: {
-    backgroundColor: 'rgba(201,168,76,0.15)',
-    borderWidth: 1,
-    borderColor: 'rgba(201,168,76,0.35)',
+  bestValueBadge: {
+    position: 'absolute',
+    top: -9,
+    right: spacing.lg,
+    backgroundColor: colors.gold,
     borderRadius: radii.sm,
-    paddingHorizontal: 6,
+    paddingHorizontal: 8,
     paddingVertical: 3,
-    flexShrink: 0,
   },
-  saveBadgeText: {
+  bestValueText: {
     fontFamily: fonts.bodySemiBold,
-    fontSize: 8,
-    color: colors.gold,
-    letterSpacing: 0.8,
+    fontSize: 9,
+    color: colors.g900,
+    letterSpacing: 1,
   },
 
   // Dev annotation
