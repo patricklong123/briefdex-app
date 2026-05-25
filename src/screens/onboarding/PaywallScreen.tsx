@@ -1,11 +1,14 @@
 import React from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import RevenueCatUI, { PAYWALL_RESULT } from 'react-native-purchases-ui';
 import { ScreenBackground } from '../../components/ScreenBackground';
 import { GoldButton } from '../../components/GoldButton';
 import { colors, fonts, radii, shadows, spacing } from '../../theme/tokens';
 import { useApp } from '../../contexts/AppContext';
+
+const TERMS_URL = 'https://briefdex.com/terms-of-service.html';
+const PRIVACY_URL = 'https://briefdex.com/privacy-policy.html';
 
 const TRUST_PILLS = [
   { icon: '🔒', label: 'No charges\nuntil day 7' },
@@ -76,8 +79,15 @@ export function PaywallScreen({ onStartTrial }: { onStartTrial: () => void }) {
 
           {/* Legal */}
           <Text style={styles.legal}>
-            By starting your trial, you agree to our Terms and Privacy Policy.{'\n'}
-            We'll send a reminder before your trial ends.
+            By starting your trial, you agree to our{' '}
+            <Text style={styles.legalLink} onPress={() => Linking.openURL(TERMS_URL)}>
+              Terms of Service
+            </Text>
+            {' '}and{' '}
+            <Text style={styles.legalLink} onPress={() => Linking.openURL(PRIVACY_URL)}>
+              Privacy Policy
+            </Text>
+            .
           </Text>
 
           {/* DEV ONLY - REMOVE BEFORE SUBMISSION */}
@@ -188,10 +198,15 @@ const styles = StyleSheet.create({
   // Legal
   legal: {
     fontFamily: fonts.body,
-    fontSize: 10,
-    color: 'rgba(255,255,255,0.25)',
+    fontSize: 11,
+    color: 'rgba(255,255,255,0.35)',
     textAlign: 'center',
-    lineHeight: 16,
+    lineHeight: 17,
+  },
+  legalLink: {
+    fontFamily: fonts.bodyMedium,
+    color: colors.gold,
+    textDecorationLine: 'underline',
   },
 
   // DEV ONLY - REMOVE BEFORE SUBMISSION
