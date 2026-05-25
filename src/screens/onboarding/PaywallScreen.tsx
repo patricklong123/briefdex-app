@@ -16,6 +16,9 @@ const TRUST_PILLS = [
 export function PaywallScreen({ onStartTrial }: { onStartTrial: () => void }) {
   const { user } = useApp();
   const firstName = user.name.split(' ')[0];
+  const heading = firstName
+    ? `Your briefing is ready, ${firstName}.`
+    : 'Your briefing is ready.';
 
   const handleStartTrial = async () => {
     const result = await RevenueCatUI.presentPaywall();
@@ -34,7 +37,7 @@ export function PaywallScreen({ onStartTrial }: { onStartTrial: () => void }) {
         >
 
           {/* Heading */}
-          <Text style={styles.heading}>Your briefing is ready, {firstName}.</Text>
+          <Text style={styles.heading}>{heading}</Text>
           <Text style={styles.sub}>Unlock everything with 7 days free.</Text>
 
           {/* Trust pills */}

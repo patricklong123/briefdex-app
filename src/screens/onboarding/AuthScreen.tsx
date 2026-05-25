@@ -12,6 +12,7 @@ interface Props {
 
 export function AuthScreen({ onNext, onOpenLogin }: Props) {
   const { signUp } = useApp();
+  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -19,13 +20,17 @@ export function AuthScreen({ onNext, onOpenLogin }: Props) {
 
   const handleSignUp = async () => {
     setError(null);
+    if (!name.trim()) {
+      setError('Enter your full name.');
+      return;
+    }
     if (!email || !password) {
       setError('Enter your email and password.');
       return;
     }
     setSubmitting(true);
     try {
-      await signUp(email.trim(), password);
+      await signUp(email.trim(), password, name);
       onNext();
     } catch (e: any) {
       setError(e?.message ?? 'Could not sign up.');
@@ -39,6 +44,20 @@ export function AuthScreen({ onNext, onOpenLogin }: Props) {
       <Text style={styles.heading}>Let's get you set up.</Text>
 
       <View style={styles.inputWrap}>
+        <TextInput
+          value={name}
+          onChangeText={setName}
+          placeholder="Full name"
+          placeholderTextColor={colors.textFaint}
+          autoCapitalize="words"
+          autoComplete="name"
+          textContentType="name"
+          editable={!submitting}
+          style={styles.input}
+        />
+      </View>
+
+      <View style={[styles.inputWrap, { marginTop: spacing.md }]}>
         <TextInput
           value={email}
           onChangeText={setEmail}

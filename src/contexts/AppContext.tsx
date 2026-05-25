@@ -8,6 +8,14 @@ import { OnboardingAnswers, UserProfile } from '../types';
 
 const PASSWORD_RESET_REDIRECT = 'briefdex://reset-password';
 
+function deriveDisplayName(sessionUser: Session['user'] | undefined): string | null {
+  if (!sessionUser) return null;
+  const meta = (sessionUser.user_metadata ?? {}) as { display_name?: string };
+  if (meta.display_name && meta.display_name.trim()) return meta.display_name.trim();
+  if (sessionUser.email) return sessionUser.email.split('@')[0];
+  return null;
+}
+
 function parseUrlFragment(url: string): Record<string, string> {
   const hashIndex = url.indexOf('#');
   if (hashIndex === -1) return {};
@@ -38,7 +46,7 @@ interface AppContextValue {
   setUser: (patch: Partial<UserProfile>) => Promise<void>;
   resetAll: () => Promise<void>;
   signIn: (email: string, password: string) => Promise<void>;
-  signUp: (email: string, password: string) => Promise<void>;
+  signUp: (email: string, password: string, name: string) => Promise<void>;
   sendPasswordReset: (email: string) => Promise<void>;
   updatePassword: (newPassword: string) => Promise<void>;
   signOut: () => Promise<void>;
@@ -48,8 +56,8 @@ interface AppContextValue {
 }
 
 const DEFAULT_USER: UserProfile = {
-  name: 'Patrick Long',
-  email: 'patrick@briefdex.co.nz',
+  name: '',
+  email: '',
   subscriptionTier: 'premium',
   renewsOn: '12 June 2026',
   stats: { streak: 14, briefingsCompleted: 42, pagesDigested: 945 },
@@ -69,16 +77,40 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     (async () => {
-      const [c, a, u] = await Promise.all([
+      const [c, a, u, cachedName] = await Promise.all([
         storage.getOnboardingComplete(),
         storage.getOnboardingAnswers(),
         storage.getUserProfile(),
+        storage.getUserName(),
       ]);
       setOnboardingComplete(c);
       setAnswersState(a);
-      if (u) setUserState(u);
+      if (u) {
+        setUserState(u);
+      } else if (cachedName) {
+        // No full profile yet but we have a cached name from a prior session.
+        setUserState((prev) => ({ ...prev, name: cachedName }));
+      }
     })();
   }, []);
+
+  // Reconcile session → local user (name + email) whenever the session changes.
+  useEffect(() => {
+    if (!session) return;
+    const displayName = deriveDisplayName(session.user);
+    const email = session.user.email ?? '';
+    setUserState((prev) => {
+      if (prev.name === (displayName ?? '') && prev.email === email) return prev;
+      const next: UserProfile = {
+        ...prev,
+        name: displayName ?? prev.name,
+        email: email || prev.email,
+      };
+      storage.setUserProfile(next);
+      return next;
+    });
+    if (displayName) storage.setUserName(displayName);
+  }, [session?.user.id, session?.user.email, session?.user.user_metadata]);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -182,14 +214,20 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setPendingSignUp(false);
   }, []);
 
-  const signUp = useCallback(async (email: string, password: string) => {
+  const signUp = useCallback(async (email: string, password: string, name: string) => {
     console.log('[auth] signUp called for:', email);
-    const { data, error } = await supabase.auth.signUp({ email, password });
+    const trimmedName = name.trim();
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: { data: { display_name: trimmedName } },
+    });
     if (error) {
       console.log('[auth] signUp error:', error.status, error.message);
       throw error;
     }
     console.log('[auth] signUp ok, session user:', data.session?.user.email);
+    if (trimmedName) await storage.setUserName(trimmedName);
     if (data.session) setSession(data.session);
   }, []);
 

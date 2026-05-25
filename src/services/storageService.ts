@@ -5,6 +5,7 @@ const K = {
   onboardingComplete: '@briefdex/onboardingComplete',
   onboardingAnswers: '@briefdex/onboardingAnswers',
   userProfile: '@briefdex/userProfile',
+  userName: 'userName',
   playbackPosition: (episodeId: string) => `@briefdex/playback/${episodeId}`,
 };
 
@@ -29,6 +30,12 @@ export const storage = {
   },
   async setUserProfile(profile: UserProfile): Promise<void> {
     await AsyncStorage.setItem(K.userProfile, JSON.stringify(profile));
+  },
+  async getUserName(): Promise<string | null> {
+    return AsyncStorage.getItem(K.userName);
+  },
+  async setUserName(name: string): Promise<void> {
+    await AsyncStorage.setItem(K.userName, name);
   },
   async getPlaybackPosition(episodeId: string): Promise<number> {
     const v = await AsyncStorage.getItem(K.playbackPosition(episodeId));
