@@ -37,7 +37,7 @@ export interface OnboardingAnswers {
   identity?: string;
   goals?: string[];
   frustration?: string;
-  projection?: string;
+  projection?: string[];
   listeningHabit?: string;
   channels?: string[];
 }

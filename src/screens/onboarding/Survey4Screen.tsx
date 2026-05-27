@@ -18,7 +18,7 @@ export function Survey4Screen({ onNext }: { onNext: () => void }) {
       question="Where do you want to be in six months?"
       options={OPTIONS}
       multi
-      initial={answers.projection as string[]}
+      initial={answers.projection}
       onNext={(v) => {
         setAnswers({ projection: v as string[] });
         onNext();
