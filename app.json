@@ -1,50 +1,41 @@
 {
-    "expo": {
-        "name": "Briefdex",
-        "slug": "briefdex-app",
-        "version": "1.0.0",
-        "orientation": "portrait",
-        "scheme": "briefdex",
-        "userInterfaceStyle": "dark",
-        "splash": {
-            "resizeMode": "contain",
-            "backgroundColor": "#0a1a10"
-        },
-        "ios": {
-            "supportsTablet": true,
-            "bundleIdentifier": "com.briefdex.app",
-            "buildNumber": "2",
-            "infoPlist": {
-                "UIBackgroundModes": [
-                    "audio",
-                    "audio"
-                ],
-                "ITSAppUsesNonExemptEncryption": false
-            }
-        },
-        "android": {
-            "package": "com.briefdex.app",
-            "adaptiveIcon": {
-                "backgroundColor": "#0a1a10"
-            },
-            "permissions": [
-                "android.permission.MODIFY_AUDIO_SETTINGS"
-            ]
-        },
-        "plugins": [
-            "expo-font",
-            [
-                "expo-av",
-                {
-                    "microphonePermission": false
-                }
-            ]
-        ],
-        "extra": {
-            "supabaseUrl": "https://ghrioxzlrltjhumzlphu.supabase.co",
-            "supabaseAnonKey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdocmlveHpscmx0amh1bXpscGh1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg2ODczMjIsImV4cCI6MjA5NDI2MzMyMn0.qdt1onam9PXNdLKYznMDnQQ53Dfbltxq32_68jOB-aA",
-            "eas": {
-                "projectId": "d05fc3f4-a3fc-44bd-9bf4-8265417e528f"
-            }
-        }
+  "expo": {
+    "name": "Briefdex",
+    "slug": "briefdex-app",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "scheme": "briefdex",
+    "userInterfaceStyle": "dark",
+    "splash": {
+      "resizeMode": "contain",
+      "backgroundColor": "#0a1a10"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.briefdex.app",
+      "buildNumber": "3",
+      "infoPlist": {
+        "UIBackgroundModes": ["audio"],
+        "ITSAppUsesNonExemptEncryption": false
+      }
+    },
+    "android": {
+      "package": "com.briefdex.app",
+      "adaptiveIcon": {
+        "backgroundColor": "#0a1a10"
+      },
+      "permissions": ["android.permission.MODIFY_AUDIO_SETTINGS"]
+    },
+    "plugins": [
+      "expo-font",
+      ["expo-av", { "microphonePermission": false }]
+    ],
+    "extra": {
+      "supabaseUrl": "https://ghrioxzlrltjhumzlphu.supabase.co",
+      "supabaseAnonKey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdocmlveHpscmx0amh1bXpscGh1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg2ODczMjIsImV4cCI6MjA5NDI2MzMyMn0.qdt1onam9PXNdLKYznMDnQQ53Dfbltxq32_68jOB-aA",
+      "eas": {
+        "projectId": "d05fc3f4-a3fc-44bd-9bf4-8265417e528f"
+      }
     }
+  }
+}
