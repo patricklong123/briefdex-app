@@ -21,7 +21,7 @@
         ],
         "ITSAppUsesNonExemptEncryption": false
       }
-    }
+    },
     "android": {
       "package": "com.briefdex.app",
       "adaptiveIcon": {
