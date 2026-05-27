@@ -15,7 +15,29 @@
       "Bash(ls /Users/patricklong/Desktop/briefdex-app/node_modules/@expo-google-fonts/playfair-display/*.ttf)",
       "Bash(npx tsc:*)",
       "Bash(xcode-select -p)",
-      "Bash(xcrun simctl:*)"
+      "Bash(xcrun simctl:*)",
+      "Bash(npx expo *)",
+      "Bash(git stash *)",
+      "Bash(npx expo-doctor *)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git push *)",
+      "Bash(eas --version)",
+      "Bash(eas whoami *)",
+      "Bash(eas build *)",
+      "Bash(eas build:view 4823be5c-9ef9-4bba-8349-c0d657e6a757 --json --non-interactive)",
+      "Bash(eas build:view 4823be5c-9ef9-4bba-8349-c0d657e6a757 --json)",
+      "Bash(xargs curl -fsSL -o xcode.log)",
+      "Bash(mv /tmp/xcode.log /tmp/xcode.log.gz)",
+      "Bash(gunzip -f /tmp/xcode.log.gz)",
+      "Bash(xxd /tmp/xcode.log)",
+      "Bash(xxd /tmp/xcode.log.gz)",
+      "Bash(node -e 'const z=require\\(\"zlib\"\\); const fs=require\\(\"fs\"\\); fs.writeFileSync\\(\"/tmp/xcode.log\", z.brotliDecompressSync\\(fs.readFileSync\\(\"/tmp/xcode.log.gz\"\\)\\)\\);')",
+      "Bash(eas build:view a2ca77cc-3563-4da8-9862-3486bed29706 --json)",
+      "Bash(EXPO_PUBLIC_SUPABASE_URL=https://example.supabase.co EXPO_PUBLIC_SUPABASE_ANON_KEY=test-key npx expo config --type public)",
+      "Bash(EXPO_PUBLIC_SUPABASE_URL=https://example.supabase.co EXPO_PUBLIC_SUPABASE_ANON_KEY=test-anon-key npx expo config --type public)",
+      "Bash(echo \"---exit $?---\")",
+      "Bash(EXPO_PUBLIC_SUPABASE_URL=https://example.supabase.co EXPO_PUBLIC_SUPABASE_ANON_KEY=test-anon-key REVENUECAT_API_KEY=test_rcat npx expo config --type public)"
     ]
   }
 }

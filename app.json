@@ -14,14 +14,21 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.briefdex.app",
       "infoPlist": {
-        "UIBackgroundModes": ["audio"]
+        "UIBackgroundModes": [
+          "audio",
+          "audio"
+        ],
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
       "package": "com.briefdex.app",
       "adaptiveIcon": {
         "backgroundColor": "#0a1a10"
-      }
+      },
+      "permissions": [
+        "android.permission.MODIFY_AUDIO_SETTINGS"
+      ]
     },
     "plugins": [
       "expo-font",
@@ -31,6 +38,11 @@
           "microphonePermission": false
         }
       ]
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "d05fc3f4-a3fc-44bd-9bf4-8265417e528f"
+      }
+    }
   }
 }

@@ -6,6 +6,7 @@ import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import * as SplashScreen from 'expo-splash-screen';
+import Constants from 'expo-constants';
 import {
   useFonts as usePlayfair,
   PlayfairDisplay_400Regular,
@@ -22,6 +23,7 @@ import {
 import { useFonts as useDMMono, DMMono_400Regular, DMMono_500Medium } from '@expo-google-fonts/dm-mono';
 import { AppProvider } from './src/contexts/AppContext';
 import { AppNavigator } from './src/navigation/AppNavigator';
+import { ErrorBoundary } from './src/components/ErrorBoundary';
 import { StatusBar } from './src/components/StatusBar';
 import { audioService } from './src/services/audioService';
 import { colors } from './src/theme/tokens';
@@ -63,9 +65,20 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    if (Platform.OS === 'ios') {
+    if (Platform.OS !== 'ios') return;
+    const apiKey = (Constants.expoConfig?.extra as { revenueCatApiKey?: string } | undefined)
+      ?.revenueCatApiKey;
+    if (!apiKey) {
+      console.error(
+        '[RevenueCat] REVENUECAT_API_KEY is not set. Purchases will be disabled.',
+      );
+      return;
+    }
+    try {
       Purchases.setLogLevel(LOG_LEVEL.VERBOSE);
-      Purchases.configure({ apiKey: 'test_WjLEAdBQwsqXZWKlcytuPqGTSMV' });
+      Purchases.configure({ apiKey });
+    } catch (err) {
+      console.error('[RevenueCat] Failed to configure Purchases:', err);
     }
   }, []);
 
@@ -82,15 +95,17 @@ export default function App() {
   }
 
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
-      <SafeAreaProvider>
-        <AppProvider>
-          <NavigationContainer theme={navTheme}>
-            <StatusBar />
-            <AppNavigator />
-          </NavigationContainer>
-        </AppProvider>
-      </SafeAreaProvider>
-    </GestureHandlerRootView>
+    <ErrorBoundary>
+      <GestureHandlerRootView style={{ flex: 1 }}>
+        <SafeAreaProvider>
+          <AppProvider>
+            <NavigationContainer theme={navTheme}>
+              <StatusBar />
+              <AppNavigator />
+            </NavigationContainer>
+          </AppProvider>
+        </SafeAreaProvider>
+      </GestureHandlerRootView>
+    </ErrorBoundary>
   );
 }
