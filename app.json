@@ -41,9 +41,10 @@
       ]
     ],
     "extra": {
+      "supabaseUrl": "https://ghrioxzlrltjhumzlphu.supabase.co",
+      "supabaseAnonKey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdocmlveHpscmx0amh1bXpscGh1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg2ODczMjIsImV4cCI6MjA5NDI2MzMyMn0.qdt1onam9PXNdLKYznMDnQQ53Dfbltxq32_68jOB-aA",
       "eas": {
         "projectId": "d05fc3f4-a3fc-44bd-9bf4-8265417e528f"
       }
     }
-  }
-}
+ 
