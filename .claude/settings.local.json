@@ -37,7 +37,9 @@
       "Bash(EXPO_PUBLIC_SUPABASE_URL=https://example.supabase.co EXPO_PUBLIC_SUPABASE_ANON_KEY=test-key npx expo config --type public)",
       "Bash(EXPO_PUBLIC_SUPABASE_URL=https://example.supabase.co EXPO_PUBLIC_SUPABASE_ANON_KEY=test-anon-key npx expo config --type public)",
       "Bash(echo \"---exit $?---\")",
-      "Bash(EXPO_PUBLIC_SUPABASE_URL=https://example.supabase.co EXPO_PUBLIC_SUPABASE_ANON_KEY=test-anon-key REVENUECAT_API_KEY=test_rcat npx expo config --type public)"
+      "Bash(EXPO_PUBLIC_SUPABASE_URL=https://example.supabase.co EXPO_PUBLIC_SUPABASE_ANON_KEY=test-anon-key REVENUECAT_API_KEY=test_rcat npx expo config --type public)",
+      "Bash(git commit *)",
+      "Bash(eas env:list --environment production)"
     ]
   }
 }
