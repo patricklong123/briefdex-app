@@ -13,6 +13,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.briefdex.app",
+      "buildNumber": "2",
       "infoPlist": {
         "UIBackgroundModes": [
           "audio",
@@ -20,7 +21,7 @@
         ],
         "ITSAppUsesNonExemptEncryption": false
       }
-    },
+    }
     "android": {
       "package": "com.briefdex.app",
       "adaptiveIcon": {
