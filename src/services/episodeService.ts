@@ -29,7 +29,6 @@ function mapEpisode(api: ApiEpisode): Episode {
     duration: api.durationSeconds,
     channel: api.channel,
     audioUrl: api.audioUrl,
-    tickerData: 'NZX 13,271 · OCR 2.25% · Brent $100.06',
   };
 }
 

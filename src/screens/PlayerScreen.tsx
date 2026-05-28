@@ -1,13 +1,23 @@
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Dimensions, Pressable, StyleSheet, Text, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import Svg, { Path } from 'react-native-svg';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import Animated, {
+  Easing,
+  Extrapolation,
+  interpolate,
+  runOnJS,
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+  withTiming,
+} from 'react-native-reanimated';
 import {
   CHANNEL_THEMES,
   ChannelKey,
-  ChannelTheme,
   colors,
   fonts,
   nextChannelInSequence,
@@ -22,6 +32,10 @@ import { SkipButton } from '../components/SkipButton';
 import { formatShortDate } from '../utils/date';
 import { fetchLatestEpisode } from '../services/episodeService';
 import { audioService } from '../services/audioService';
+
+const SCREEN_HEIGHT = Dimensions.get('window').height;
+const DISMISS_DISTANCE = 130;
+const DISMISS_VELOCITY = 800;
 
 interface Props {
   onClose: () => void;
@@ -46,6 +60,52 @@ export function PlayerScreen({ onClose, channelKey = 'daily-wrap' }: Props) {
   const { prefs } = usePreferences();
   const [scrubRatio, setScrubRatio] = useState<number | null>(null);
   const [fetchError, setFetchError] = useState<string | null>(null);
+
+  // --- Gesture-driven sheet dismissal (à la Apple Music / Spotify) ---
+  // The whole player slides up on mount and follows the finger downward; on
+  // release it either flings closed or springs back to fully open.
+  const translateY = useSharedValue(SCREEN_HEIGHT);
+
+  useEffect(() => {
+    translateY.value = withTiming(0, { duration: 340, easing: Easing.out(Easing.cubic) });
+  }, [translateY]);
+
+  const dismiss = () => {
+    translateY.value = withTiming(
+      SCREEN_HEIGHT,
+      { duration: 260, easing: Easing.in(Easing.cubic) },
+      (finished) => {
+        if (finished) runOnJS(onClose)();
+      },
+    );
+  };
+
+  const pan = Gesture.Pan()
+    .activeOffsetY(12)
+    .failOffsetX([-24, 24])
+    .onUpdate((e) => {
+      translateY.value = Math.max(0, e.translationY);
+    })
+    .onEnd((e) => {
+      if (e.translationY > DISMISS_DISTANCE || e.velocityY > DISMISS_VELOCITY) {
+        translateY.value = withTiming(
+          SCREEN_HEIGHT,
+          { duration: 240, easing: Easing.in(Easing.cubic) },
+          (finished) => {
+            if (finished) runOnJS(onClose)();
+          },
+        );
+      } else {
+        translateY.value = withSpring(0, { damping: 22, stiffness: 220 });
+      }
+    });
+
+  const sheetStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: translateY.value }],
+  }));
+  const backdropStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(translateY.value, [0, SCREEN_HEIGHT], [0.55, 0], Extrapolation.CLAMP),
+  }));
 
   // If the modal re-opens with a different channel without unmounting, follow the prop.
   useEffect(() => {
@@ -100,18 +160,16 @@ export function PlayerScreen({ onClose, channelKey = 'daily-wrap' }: Props) {
   }, [prefs.autoplayNextChannel, currentChannel]);
 
   const episode = player.episode;
+  const loading = isFetching || !episode;
 
-  if (isFetching || !episode) {
-    return <LoadingView theme={theme} onClose={onClose} error={fetchError} />;
-  }
-
-  const duration = player.durationSec || episode.duration;
+  const duration = episode ? player.durationSec || episode.duration : 0;
   const rawPosition = player.positionSec;
   const position = scrubRatio !== null ? scrubRatio * duration : rawPosition;
   const progress = duration > 0 ? rawPosition / duration : 0;
-  const durationMin = Math.max(1, Math.round(episode.duration / 60));
+  const durationMin = episode ? Math.max(1, Math.round(episode.duration / 60)) : 0;
   const metaText =
-    theme.eyebrowText ?? `${formatShortDate(episode.date)} · ${durationMin} MIN`;
+    theme.eyebrowText ??
+    (episode ? `${formatShortDate(episode.date)} · ${durationMin} MIN` : '');
 
   const togglePlay = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
@@ -123,196 +181,204 @@ export function PlayerScreen({ onClose, channelKey = 'daily-wrap' }: Props) {
     player.cycleRate();
   };
 
+  const closeButton = (extraStyle?: object) => (
+    <Pressable onPress={dismiss} style={[styles.iconBtn, extraStyle]} hitSlop={10}>
+      <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
+        <Path
+          d="M6 9l6 6 6-6"
+          stroke={colors.white}
+          strokeWidth={2}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </Svg>
+    </Pressable>
+  );
+
   return (
-    <View style={[styles.root, { backgroundColor: theme.gradient[0] }]}>
-      <SafeAreaView style={{ flex: 1 }} edges={['top', 'bottom']}>
-        {/* Top bar */}
-        <View style={styles.topBar}>
-          <Pressable onPress={onClose} style={styles.iconBtn} hitSlop={10}>
-            <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
-              <Path
-                d="M6 9l6 6 6-6"
-                stroke={colors.white}
-                strokeWidth={2}
-                strokeLinecap="round"
-                strokeLinejoin="round"
+    <View style={StyleSheet.absoluteFill}>
+      <Animated.View style={[styles.backdrop, backdropStyle]} pointerEvents="none" />
+      <Animated.View
+        style={[
+          styles.root,
+          { backgroundColor: theme.gradient[0] },
+          loading && styles.loadingRoot,
+          sheetStyle,
+        ]}
+      >
+        {loading ? (
+          <GestureDetector gesture={pan}>
+            <SafeAreaView style={styles.loadingSafe} edges={['top', 'bottom']}>
+              {closeButton(styles.loadingClose)}
+              {fetchError ? (
+                <Text style={styles.loadingText}>{fetchError}</Text>
+              ) : (
+                <>
+                  <ActivityIndicator color={theme.accent} />
+                  <Text style={styles.loadingText}>Loading {theme.italicTitle}…</Text>
+                </>
+              )}
+            </SafeAreaView>
+          </GestureDetector>
+        ) : (
+          <SafeAreaView style={{ flex: 1 }} edges={['top', 'bottom']}>
+            {/* Drag-to-dismiss is bound to the top bar + cover art so the
+                transport controls below stay fully interactive. */}
+            <GestureDetector gesture={pan}>
+              <View style={styles.dragArea}>
+                <View style={styles.topBar}>
+                  {closeButton()}
+                  <View style={{ alignItems: 'center' }}>
+                    <Text style={[styles.eyebrow, { color: theme.accent }]}>NOW PLAYING</Text>
+                    <Text style={styles.eyebrowSub}>{theme.channelLabel}</Text>
+                  </View>
+                  <View
+                    style={[
+                      styles.letterBadge,
+                      { backgroundColor: theme.accentFaint, borderColor: theme.accentBorder },
+                    ]}
+                  >
+                    <Text style={[styles.letterBadgeText, { color: theme.accent }]}>
+                      {theme.letter}
+                    </Text>
+                  </View>
+                </View>
+
+                <View style={styles.coverWrap}>
+                  <LinearGradient
+                    colors={theme.gradient}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={[styles.cover, { borderColor: theme.accentBorder }]}
+                  >
+                    <LinearGradient
+                      pointerEvents="none"
+                      colors={[theme.overlayTopRight, 'transparent']}
+                      start={{ x: 1, y: 0 }}
+                      end={{ x: 0.2, y: 0.5 }}
+                      style={StyleSheet.absoluteFillObject as any}
+                    />
+                    <LinearGradient
+                      pointerEvents="none"
+                      colors={['transparent', theme.overlayBottomLeft]}
+                      start={{ x: 0.2, y: 0.5 }}
+                      end={{ x: 0, y: 1 }}
+                      style={StyleSheet.absoluteFillObject as any}
+                    />
+
+                    <View style={styles.coverTop}>
+                      <View
+                        style={[
+                          styles.badge,
+                          { backgroundColor: theme.accentFaint, borderColor: theme.accentBorder },
+                        ]}
+                      >
+                        <PulsingDot size={6} color={theme.accent} />
+                        <Text style={[styles.badgeText, { color: theme.accent }]}>
+                          {theme.badgeText}
+                        </Text>
+                      </View>
+                    </View>
+
+                    <View style={styles.coverBottom}>
+                      <Text style={[styles.coverItalic, { color: theme.accentLight }]}>
+                        {theme.italicTitle}
+                      </Text>
+                      <Text style={styles.coverTitle}>{theme.tagline}</Text>
+                      <Text style={styles.coverMeta}>{metaText}</Text>
+                    </View>
+                  </LinearGradient>
+                </View>
+              </View>
+            </GestureDetector>
+
+            {/* Controls */}
+            <View style={styles.controls}>
+              <ScrubBar
+                progress={progress}
+                onScrub={setScrubRatio}
+                onScrubComplete={(r) => {
+                  Haptics.selectionAsync().catch(() => {});
+                  player.seekTo(r * duration);
+                  setScrubRatio(null);
+                }}
+                height={4}
+                color={theme.accent}
+                colorLight={theme.accentLight}
               />
-            </Svg>
-          </Pressable>
-          <View style={{ alignItems: 'center' }}>
-            <Text style={[styles.eyebrow, { color: theme.accent }]}>NOW PLAYING</Text>
-            <Text style={styles.eyebrowSub}>{theme.channelLabel}</Text>
-          </View>
-          <View
-            style={[
-              styles.letterBadge,
-              { backgroundColor: theme.accentFaint, borderColor: theme.accentBorder },
-            ]}
-          >
-            <Text style={[styles.letterBadgeText, { color: theme.accent }]}>{theme.letter}</Text>
-          </View>
-        </View>
+              <View style={styles.timeRow}>
+                <Text style={[styles.timeGold, { color: theme.accent }]}>{fmt(position)}</Text>
+                <Text style={styles.timeFaint}>{fmt(duration)}</Text>
+              </View>
 
-        {/* Cover art */}
-        <View style={styles.coverWrap}>
-          <LinearGradient
-            colors={theme.gradient}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={[styles.cover, { borderColor: theme.accentBorder }]}
-          >
-            <LinearGradient
-              pointerEvents="none"
-              colors={[theme.overlayTopRight, 'transparent']}
-              start={{ x: 1, y: 0 }}
-              end={{ x: 0.2, y: 0.5 }}
-              style={StyleSheet.absoluteFillObject as any}
-            />
-            <LinearGradient
-              pointerEvents="none"
-              colors={['transparent', theme.overlayBottomLeft]}
-              start={{ x: 0.2, y: 0.5 }}
-              end={{ x: 0, y: 1 }}
-              style={StyleSheet.absoluteFillObject as any}
-            />
+              <View style={styles.transport}>
+                <SkipButton
+                  direction="back"
+                  seconds={prefs.skipInterval}
+                  onPress={() => player.skipBack(prefs.skipInterval)}
+                />
+                <Pressable
+                  onPress={togglePlay}
+                  style={({ pressed }) => [
+                    styles.playBtnWrap,
+                    {
+                      shadowColor: theme.accent,
+                      shadowOffset: { width: 0, height: 6 },
+                      shadowOpacity: 0.45,
+                      shadowRadius: 24,
+                      elevation: 8,
+                    },
+                    pressed && { transform: [{ scale: 0.97 }] },
+                  ]}
+                >
+                  <LinearGradient
+                    colors={[theme.accentLight, theme.accent]}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={styles.playBtn}
+                  >
+                    {player.isPlaying ? (
+                      <View style={styles.pauseRow}>
+                        <View style={[styles.pauseBar, { backgroundColor: theme.accentInk }]} />
+                        <View style={[styles.pauseBar, { backgroundColor: theme.accentInk }]} />
+                      </View>
+                    ) : (
+                      <View style={[styles.bigTriangle, { borderLeftColor: theme.accentInk }]} />
+                    )}
+                  </LinearGradient>
+                </Pressable>
+                <SkipButton
+                  direction="forward"
+                  seconds={prefs.skipInterval}
+                  onPress={() => player.skipForward(prefs.skipInterval)}
+                />
+              </View>
 
-            <View style={styles.coverTop}>
-              <View
+              <Pressable
+                onPress={cycleSpeed}
                 style={[
-                  styles.badge,
+                  styles.speedChip,
                   { backgroundColor: theme.accentFaint, borderColor: theme.accentBorder },
                 ]}
+                hitSlop={10}
               >
-                <PulsingDot size={6} color={theme.accent} />
-                <Text style={[styles.badgeText, { color: theme.accent }]}>{theme.badgeText}</Text>
-              </View>
+                <Text style={[styles.speedText, { color: theme.accent }]}>
+                  {formatRate(player.rate)}x
+                </Text>
+              </Pressable>
             </View>
-
-            <View style={styles.coverBottom}>
-              <Text style={[styles.coverItalic, { color: theme.accentLight }]}>
-                {theme.italicTitle}
-              </Text>
-              <Text style={styles.coverTitle}>{theme.tagline}</Text>
-              <Text style={styles.coverMeta}>{metaText}</Text>
-            </View>
-          </LinearGradient>
-        </View>
-
-        {/* Controls */}
-        <View style={styles.controls}>
-          <ScrubBar
-            progress={progress}
-            onScrub={setScrubRatio}
-            onScrubComplete={(r) => {
-              Haptics.selectionAsync().catch(() => {});
-              player.seekTo(r * duration);
-              setScrubRatio(null);
-            }}
-            height={4}
-            color={theme.accent}
-            colorLight={theme.accentLight}
-          />
-          <View style={styles.timeRow}>
-            <Text style={[styles.timeGold, { color: theme.accent }]}>{fmt(position)}</Text>
-            <Text style={styles.timeFaint}>{fmt(duration)}</Text>
-          </View>
-
-          <View style={styles.transport}>
-            <SkipButton
-              direction="back"
-              seconds={prefs.skipInterval}
-              onPress={() => player.skipBack(prefs.skipInterval)}
-            />
-            <Pressable
-              onPress={togglePlay}
-              style={({ pressed }) => [
-                styles.playBtnWrap,
-                {
-                  shadowColor: theme.accent,
-                  shadowOffset: { width: 0, height: 6 },
-                  shadowOpacity: 0.45,
-                  shadowRadius: 24,
-                  elevation: 8,
-                },
-                pressed && { transform: [{ scale: 0.97 }] },
-              ]}
-            >
-              <LinearGradient
-                colors={[theme.accentLight, theme.accent]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.playBtn}
-              >
-                {player.isPlaying ? (
-                  <View style={styles.pauseRow}>
-                    <View style={[styles.pauseBar, { backgroundColor: theme.accentInk }]} />
-                    <View style={[styles.pauseBar, { backgroundColor: theme.accentInk }]} />
-                  </View>
-                ) : (
-                  <View style={[styles.bigTriangle, { borderLeftColor: theme.accentInk }]} />
-                )}
-              </LinearGradient>
-            </Pressable>
-            <SkipButton
-              direction="forward"
-              seconds={prefs.skipInterval}
-              onPress={() => player.skipForward(prefs.skipInterval)}
-            />
-          </View>
-
-          <Pressable
-            onPress={cycleSpeed}
-            style={[
-              styles.speedChip,
-              { backgroundColor: theme.accentFaint, borderColor: theme.accentBorder },
-            ]}
-            hitSlop={10}
-          >
-            <Text style={[styles.speedText, { color: theme.accent }]}>
-              {formatRate(player.rate)}x
-            </Text>
-          </Pressable>
-        </View>
-      </SafeAreaView>
-    </View>
-  );
-}
-
-interface LoadingProps {
-  theme: ChannelTheme;
-  onClose: () => void;
-  error: string | null;
-}
-
-function LoadingView({ theme, onClose, error }: LoadingProps) {
-  return (
-    <View style={[styles.root, styles.loadingRoot, { backgroundColor: theme.gradient[0] }]}>
-      <SafeAreaView style={styles.loadingSafe} edges={['top', 'bottom']}>
-        <Pressable onPress={onClose} style={[styles.iconBtn, styles.loadingClose]} hitSlop={10}>
-          <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
-            <Path
-              d="M6 9l6 6 6-6"
-              stroke={colors.white}
-              strokeWidth={2}
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </Svg>
-        </Pressable>
-        {error ? (
-          <Text style={styles.loadingText}>{error}</Text>
-        ) : (
-          <>
-            <ActivityIndicator color={theme.accent} />
-            <Text style={styles.loadingText}>Loading {theme.italicTitle}…</Text>
-          </>
+          </SafeAreaView>
         )}
-      </SafeAreaView>
+      </Animated.View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  backdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: '#000',
+  },
   root: { flex: 1, backgroundColor: colors.g900 },
   loadingRoot: {
     alignItems: 'center',
@@ -336,6 +402,9 @@ const styles = StyleSheet.create({
     color: colors.textDim,
     textAlign: 'center',
     paddingHorizontal: spacing.xl,
+  },
+  dragArea: {
+    flex: 1,
   },
   topBar: {
     flexDirection: 'row',

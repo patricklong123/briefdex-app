@@ -39,7 +39,10 @@
       "Bash(echo \"---exit $?---\")",
       "Bash(EXPO_PUBLIC_SUPABASE_URL=https://example.supabase.co EXPO_PUBLIC_SUPABASE_ANON_KEY=test-anon-key REVENUECAT_API_KEY=test_rcat npx expo config --type public)",
       "Bash(git commit *)",
-      "Bash(eas env:list --environment production)"
+      "Bash(eas env:list --environment production)",
+      "Bash(echo \"tsc exit: $?\")",
+      "Bash(node -e \"const p=require\\('react-native-track-player/package.json'\\); console.log\\(JSON.stringify\\(p.peerDependencies||{},null,1\\)\\)\")",
+      "Bash(node -e \"const p=require\\('react-native-track-player/package.json'\\); console.log\\('types:',p.types||p.typings\\); console.log\\('main:',p.main\\)\")"
     ]
   }
 }

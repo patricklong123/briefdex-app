@@ -1,6 +1,7 @@
 import 'react-native-gesture-handler';
 import React, { useEffect } from 'react';
 import { View, ActivityIndicator, Platform } from 'react-native';
+import TrackPlayer from 'react-native-track-player';
 import Purchases, { LOG_LEVEL } from 'react-native-purchases';
 import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -26,9 +27,14 @@ import { AppNavigator } from './src/navigation/AppNavigator';
 import { ErrorBoundary } from './src/components/ErrorBoundary';
 import { StatusBar } from './src/components/StatusBar';
 import { audioService } from './src/services/audioService';
+import { configureNotifications } from './src/services/notificationsService';
 import { colors } from './src/theme/tokens';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
+
+// Register the headless playback service so OS remote controls (lock screen,
+// Control Center) reach the player. Must run at module scope, before setup.
+TrackPlayer.registerPlaybackService(() => require('./src/services/trackPlayerService'));
 
 const navTheme = {
   ...DefaultTheme,
@@ -62,6 +68,7 @@ export default function App() {
 
   useEffect(() => {
     audioService.configure().catch(() => {});
+    configureNotifications().catch(() => {});
   }, []);
 
   useEffect(() => {

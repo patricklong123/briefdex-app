@@ -1,6 +1,17 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Platform } from 'react-native';
+import * as Notifications from 'expo-notifications';
 
 const STORAGE_KEY = '@briefdex/notifications';
+
+const DAILY_BRIEFING_CONTENT = {
+  title: "Today's briefing is ready",
+  body: 'Your Briefdex Daily Wrap is waiting — markets before your first coffee.',
+};
+const LISTENING_REMINDER_CONTENT = {
+  title: 'Haven’t listened yet?',
+  body: 'Your daily brief is ready whenever you are.',
+};
 
 export interface TimeOfDay {
   hour: number; // 0-23
@@ -49,7 +60,61 @@ class NotificationsService {
     this.cache = next;
     await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(next));
     this.listeners.forEach((l) => l(next));
+    // Reflect the new settings in the OS scheduler. Requesting permission is
+    // allowed here because this path is only reached from an explicit user
+    // interaction (toggling/adjusting a reminder).
+    await this.applySchedule(next, true);
     return next;
+  }
+
+  /**
+   * Reconcile the OS-scheduled notifications with the given settings. Existing
+   * Briefdex reminders are cleared and re-created from scratch so the schedule
+   * is always an exact mirror of the stored settings.
+   *
+   * @param request when true, prompt for permission if not yet granted. Pass
+   *   false on app launch so we never surface a permission dialog unprompted.
+   */
+  async applySchedule(settings: NotificationSettings, request: boolean): Promise<void> {
+    try {
+      const wantsAny = settings.dailyBriefing.enabled || settings.listeningReminder.enabled;
+      const granted = wantsAny ? await this.ensurePermissions(request) : false;
+
+      await Notifications.cancelAllScheduledNotificationsAsync().catch(() => {});
+      if (!granted) return;
+
+      if (settings.dailyBriefing.enabled) {
+        await this.scheduleDaily(DAILY_BRIEFING_CONTENT, settings.dailyBriefing.time);
+      }
+      if (settings.listeningReminder.enabled) {
+        await this.scheduleDaily(LISTENING_REMINDER_CONTENT, settings.listeningReminder.time);
+      }
+    } catch {
+      // Never let a scheduling/permission failure bubble up — settings have
+      // already been persisted, and the schedule re-syncs on next launch.
+    }
+  }
+
+  private async scheduleDaily(
+    content: { title: string; body: string },
+    time: TimeOfDay,
+  ): Promise<void> {
+    await Notifications.scheduleNotificationAsync({
+      content: { ...content, sound: true },
+      trigger: {
+        type: Notifications.SchedulableTriggerInputTypes.DAILY,
+        hour: time.hour,
+        minute: time.minute,
+      },
+    }).catch(() => {});
+  }
+
+  private async ensurePermissions(request: boolean): Promise<boolean> {
+    const current = await Notifications.getPermissionsAsync();
+    if (current.granted) return true;
+    if (!request || !current.canAskAgain) return false;
+    const next = await Notifications.requestPermissionsAsync();
+    return next.granted;
   }
 
   subscribe(listener: Listener): () => void {
@@ -73,6 +138,36 @@ class NotificationsService {
 }
 
 export const notificationsService = new NotificationsService();
+
+let handlerConfigured = false;
+
+/**
+ * Set up the notification handler + Android channel, then re-apply the stored
+ * schedule (without prompting for permission). Call once on app launch.
+ */
+export async function configureNotifications(): Promise<void> {
+  if (!handlerConfigured) {
+    Notifications.setNotificationHandler({
+      handleNotification: async () => ({
+        shouldShowBanner: true,
+        shouldShowList: true,
+        shouldPlaySound: true,
+        shouldSetBadge: false,
+      }),
+    });
+    handlerConfigured = true;
+  }
+
+  if (Platform.OS === 'android') {
+    await Notifications.setNotificationChannelAsync('default', {
+      name: 'Daily briefings',
+      importance: Notifications.AndroidImportance.DEFAULT,
+    }).catch(() => {});
+  }
+
+  const settings = await notificationsService.get();
+  await notificationsService.applySchedule(settings, false);
+}
 
 export function formatTime({ hour, minute }: TimeOfDay): string {
   const period = hour >= 12 ? 'PM' : 'AM';

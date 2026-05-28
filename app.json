@@ -24,10 +24,15 @@
       "adaptiveIcon": {
         "backgroundColor": "#0a1a10"
       },
-      "permissions": ["android.permission.MODIFY_AUDIO_SETTINGS"]
+      "permissions": [
+        "android.permission.MODIFY_AUDIO_SETTINGS",
+        "android.permission.FOREGROUND_SERVICE",
+        "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK"
+      ]
     },
     "plugins": [
       "expo-font",
+      "expo-notifications",
       ["expo-av", { "microphonePermission": false }]
     ],
     "extra": {

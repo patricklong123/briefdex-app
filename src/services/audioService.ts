@@ -1,10 +1,27 @@
-import { Audio, AVPlaybackStatus, InterruptionModeIOS, InterruptionModeAndroid } from 'expo-av';
+import TrackPlayer, {
+  AppKilledPlaybackBehavior,
+  Capability,
+  Event,
+  State,
+} from 'react-native-track-player';
 import { Episode, PlaybackRate } from '../types';
+import { CHANNELS } from '../data/placeholders';
 import { storage } from './storageService';
 import { progressService } from './progressService';
 import { preferencesService } from './preferencesService';
 
 const PROGRESS_SAVE_INTERVAL_SEC = 5;
+
+// Channel display names for the lock-screen "artist" line. Derived from the
+// channel placeholders (single source of truth) plus the Daily Wrap.
+const CHANNEL_DISPLAY: Record<string, string> = {
+  'daily-wrap': 'Daily Wrap',
+  ...Object.fromEntries(CHANNELS.map((c) => [c.id, c.name])),
+};
+
+function channelDisplay(apiChannel: string): string {
+  return CHANNEL_DISPLAY[apiChannel] ?? 'Briefdex';
+}
 
 type Listener = (state: {
   episode: Episode | null;
@@ -17,7 +34,6 @@ type Listener = (state: {
 type FinishListener = (episode: Episode) => void;
 
 class AudioService {
-  private sound: Audio.Sound | null = null;
   private episode: Episode | null = null;
   private isPlaying = false;
   private positionSec = 0;
@@ -25,28 +41,91 @@ class AudioService {
   private rate: PlaybackRate = 1.0;
   private listeners = new Set<Listener>();
   private finishListeners = new Set<FinishListener>();
-  private configured = false;
+  private initPromise: Promise<void> | null = null;
   private lastProgressSavePosSec = Number.NEGATIVE_INFINITY;
   private defaultRate: PlaybackRate = 1.0;
   private skipIntervalSec = 15;
+  // True when the loaded episode has no real audio URL — we then simulate
+  // progress with a timer so the UI demos without a backend (no lock-screen).
+  private mockMode = false;
+  private mockTimer: ReturnType<typeof setInterval> | null = null;
 
   constructor() {
     preferencesService.subscribe((p) => {
       this.defaultRate = p.playbackSpeed as PlaybackRate;
       this.skipIntervalSec = p.skipInterval;
+      // Keep the lock-screen skip buttons in step with the user's preference.
+      if (this.initPromise) {
+        TrackPlayer.updateOptions({
+          forwardJumpInterval: this.skipIntervalSec,
+          backwardJumpInterval: this.skipIntervalSec,
+        }).catch(() => {});
+      }
     });
   }
 
-  async configure() {
-    if (this.configured) return;
-    await Audio.setAudioModeAsync({
-      staysActiveInBackground: true,
-      playsInSilentModeIOS: true,
-      shouldDuckAndroid: true,
-      interruptionModeIOS: InterruptionModeIOS.DoNotMix,
-      interruptionModeAndroid: InterruptionModeAndroid.DoNotMix,
+  configure(): Promise<void> {
+    if (!this.initPromise) this.initPromise = this.setup();
+    return this.initPromise;
+  }
+
+  private async setup() {
+    try {
+      await TrackPlayer.setupPlayer({ autoHandleInterruptions: true });
+    } catch {
+      // setupPlayer throws if the native player is already initialised — safe to ignore.
+    }
+    await TrackPlayer.updateOptions({
+      android: {
+        appKilledPlaybackBehavior: AppKilledPlaybackBehavior.StopPlaybackAndRemoveNotification,
+      },
+      progressUpdateEventInterval: 1,
+      forwardJumpInterval: this.skipIntervalSec,
+      backwardJumpInterval: this.skipIntervalSec,
+      capabilities: [
+        Capability.Play,
+        Capability.Pause,
+        Capability.JumpForward,
+        Capability.JumpBackward,
+        Capability.SeekTo,
+      ],
+      compactCapabilities: [
+        Capability.Play,
+        Capability.Pause,
+        Capability.JumpForward,
+        Capability.JumpBackward,
+      ],
     });
-    this.configured = true;
+    this.registerEvents();
+  }
+
+  private registerEvents() {
+    TrackPlayer.addEventListener(Event.PlaybackState, (e) => {
+      if (this.mockMode) return;
+      this.isPlaying = e.state === State.Playing;
+      this.emit();
+    });
+
+    TrackPlayer.addEventListener(Event.PlaybackProgressUpdated, (e) => {
+      if (this.mockMode) return;
+      this.positionSec = e.position;
+      if (e.duration > 0) this.durationSec = e.duration;
+      if (this.episode) {
+        storage.setPlaybackPosition(this.episode.id, this.positionSec);
+        this.maybeSaveProgress();
+      }
+      this.emit();
+    });
+
+    TrackPlayer.addEventListener(Event.PlaybackQueueEnded, () => {
+      if (this.mockMode || !this.episode) return;
+      const finished = this.episode;
+      this.positionSec = this.durationSec;
+      this.isPlaying = false;
+      progressService.markComplete(finished.channel, finished.dateKey);
+      this.emit();
+      this.emitFinish(finished);
+    });
   }
 
   subscribe(l: Listener): () => void {
@@ -79,54 +158,115 @@ class AudioService {
     };
   }
 
+  /** The episode currently loaded into the player, if any. */
+  get currentEpisode(): Episode | null {
+    return this.episode;
+  }
+
   async load(episode: Episode) {
     await this.configure();
-    if (this.episode?.id === episode.id && this.sound) return;
-    if (this.sound) {
-      await this.sound.unloadAsync().catch(() => {});
-      this.sound = null;
-    }
+    // Idempotent by episode id — re-loading the same episode (e.g. when a screen
+    // remounts during navigation) must never reset position or interrupt playback.
+    if (this.episode?.id === episode.id) return;
+
+    this.stopMockTimer();
     this.episode = episode;
     this.positionSec = await storage.getPlaybackPosition(episode.id);
     this.durationSec = episode.duration;
     this.rate = this.defaultRate;
     this.lastProgressSavePosSec = Number.NEGATIVE_INFINITY;
+    this.isPlaying = false;
     this.emit();
 
     if (!episode.audioUrl) {
-      // No real audio URL — operate in mock mode. Playback simulates progress.
+      // No real audio — mock mode. Clear any queued track so the lock screen
+      // doesn't show stale Now Playing info from a previous episode.
+      this.mockMode = true;
+      await TrackPlayer.reset().catch(() => {});
       return;
     }
+
+    this.mockMode = false;
     try {
-      const { sound } = await Audio.Sound.createAsync(
-        { uri: episode.audioUrl },
-        { shouldPlay: false, positionMillis: this.positionSec * 1000, rate: this.rate },
-        this.onStatus,
-      );
-      this.sound = sound;
-    } catch (e) {
-      // Fall back to mock mode silently
+      await TrackPlayer.reset();
+      await TrackPlayer.add({
+        id: episode.id,
+        url: episode.audioUrl,
+        title: episode.title,
+        artist: channelDisplay(episode.channel),
+        album: 'Briefdex',
+        duration: episode.duration,
+      });
+      if (this.positionSec > 0) await TrackPlayer.seekTo(this.positionSec);
+      await TrackPlayer.setRate(this.rate);
+    } catch {
+      // Couldn't stage the track — fall back to mock playback so the UI still works.
+      this.mockMode = true;
     }
   }
 
-  private onStatus = (status: AVPlaybackStatus) => {
-    if (!status.isLoaded) return;
-    this.isPlaying = status.isPlaying;
-    this.positionSec = status.positionMillis / 1000;
-    this.durationSec = (status.durationMillis ?? this.episode?.duration ?? 0) / 1000;
-    if (this.episode) {
-      storage.setPlaybackPosition(this.episode.id, this.positionSec);
-      if (status.didJustFinish) {
-        const finished = this.episode;
-        progressService.markComplete(finished.channel, finished.dateKey);
-        this.emit();
-        this.emitFinish(finished);
-        return;
-      }
-      this.maybeSaveProgress();
+  async play() {
+    if (this.mockMode) {
+      this.startMockTimer();
+      return;
     }
+    await TrackPlayer.play();
+  }
+
+  async pause() {
+    if (this.mockMode) {
+      this.isPlaying = false;
+      this.stopMockTimer();
+      this.emit();
+      return;
+    }
+    await TrackPlayer.pause();
+  }
+
+  async toggle() {
+    if (this.isPlaying) await this.pause();
+    else await this.play();
+  }
+
+  async seekTo(positionSec: number) {
+    const clamped = Math.max(0, Math.min(this.durationSec, positionSec));
+    this.positionSec = clamped;
     this.emit();
-  };
+    if (!this.mockMode) await TrackPlayer.seekTo(clamped);
+    if (this.episode) storage.setPlaybackPosition(this.episode.id, clamped);
+  }
+
+  async skipForward(seconds?: number) {
+    await this.seekTo(this.positionSec + (seconds ?? this.skipIntervalSec));
+  }
+
+  async skipBack(seconds?: number) {
+    await this.seekTo(this.positionSec - (seconds ?? this.skipIntervalSec));
+  }
+
+  async setRate(rate: PlaybackRate) {
+    this.rate = rate;
+    if (!this.mockMode) await TrackPlayer.setRate(rate);
+    this.emit();
+  }
+
+  cycleRate() {
+    const cycle: PlaybackRate[] = [0.75, 1.0, 1.25, 1.5, 2.0];
+    const idx = cycle.indexOf(this.rate);
+    const next = cycle[(idx + 1) % cycle.length];
+    return this.setRate(next);
+  }
+
+  async unload() {
+    this.stopMockTimer();
+    if (!this.mockMode) await TrackPlayer.reset().catch(() => {});
+    this.isPlaying = false;
+    this.episode = null;
+    this.positionSec = 0;
+    this.durationSec = 0;
+    this.mockMode = false;
+    this.emit();
+  }
 
   private maybeSaveProgress() {
     if (!this.episode) return;
@@ -142,97 +282,40 @@ class AudioService {
     );
   }
 
-  private mockTimer: ReturnType<typeof setInterval> | null = null;
-
-  async play() {
-    if (this.sound) {
-      await this.sound.playAsync();
-    } else {
-      // Mock playback
-      this.isPlaying = true;
-      this.emit();
-      if (this.mockTimer) clearInterval(this.mockTimer);
-      this.mockTimer = setInterval(() => {
-        if (!this.isPlaying) return;
-        this.positionSec += this.rate;
-        let finished = false;
-        if (this.positionSec >= this.durationSec) {
-          this.positionSec = this.durationSec;
-          this.isPlaying = false;
-          finished = true;
-          if (this.mockTimer) clearInterval(this.mockTimer);
-        }
-        if (this.episode) {
-          storage.setPlaybackPosition(this.episode.id, this.positionSec);
-          if (finished) {
-            const finishedEpisode = this.episode;
-            progressService.markComplete(finishedEpisode.channel, finishedEpisode.dateKey);
-            this.emit();
-            this.emitFinish(finishedEpisode);
-            return;
-          }
-          this.maybeSaveProgress();
-        }
-        this.emit();
-      }, 1000);
-    }
-  }
-
-  async pause() {
-    if (this.sound) {
-      await this.sound.pauseAsync();
-    } else {
-      this.isPlaying = false;
-      if (this.mockTimer) clearInterval(this.mockTimer);
-      this.emit();
-    }
-  }
-
-  async toggle() {
-    if (this.isPlaying) await this.pause();
-    else await this.play();
-  }
-
-  async seekTo(positionSec: number) {
-    const clamped = Math.max(0, Math.min(this.durationSec, positionSec));
-    this.positionSec = clamped;
+  private startMockTimer() {
+    this.isPlaying = true;
     this.emit();
-    if (this.sound) await this.sound.setPositionAsync(clamped * 1000);
-    if (this.episode) storage.setPlaybackPosition(this.episode.id, clamped);
-  }
-
-  async skipForward(seconds?: number) {
-    await this.seekTo(this.positionSec + (seconds ?? this.skipIntervalSec));
-  }
-
-  async skipBack(seconds?: number) {
-    await this.seekTo(this.positionSec - (seconds ?? this.skipIntervalSec));
-  }
-
-  async setRate(rate: PlaybackRate) {
-    this.rate = rate;
-    if (this.sound) await this.sound.setRateAsync(rate, true);
-    this.emit();
-  }
-
-  cycleRate() {
-    const cycle: PlaybackRate[] = [0.75, 1.0, 1.25, 1.5, 2.0];
-    const idx = cycle.indexOf(this.rate);
-    const next = cycle[(idx + 1) % cycle.length];
-    return this.setRate(next);
-  }
-
-  async unload() {
-    if (this.sound) {
-      await this.sound.unloadAsync().catch(() => {});
-      this.sound = null;
-    }
     if (this.mockTimer) clearInterval(this.mockTimer);
-    this.isPlaying = false;
-    this.episode = null;
-    this.positionSec = 0;
-    this.durationSec = 0;
-    this.emit();
+    this.mockTimer = setInterval(() => {
+      if (!this.isPlaying) return;
+      this.positionSec += this.rate;
+      let finished = false;
+      if (this.positionSec >= this.durationSec) {
+        this.positionSec = this.durationSec;
+        this.isPlaying = false;
+        finished = true;
+        this.stopMockTimer();
+      }
+      if (this.episode) {
+        storage.setPlaybackPosition(this.episode.id, this.positionSec);
+        if (finished) {
+          const finishedEpisode = this.episode;
+          progressService.markComplete(finishedEpisode.channel, finishedEpisode.dateKey);
+          this.emit();
+          this.emitFinish(finishedEpisode);
+          return;
+        }
+        this.maybeSaveProgress();
+      }
+      this.emit();
+    }, 1000);
+  }
+
+  private stopMockTimer() {
+    if (this.mockTimer) {
+      clearInterval(this.mockTimer);
+      this.mockTimer = null;
+    }
   }
 }
 

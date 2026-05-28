@@ -40,7 +40,10 @@ export function HomeScreen({ onOpenPlayer, onOpenProfile }: Props) {
         if (cancelled) return;
         setEpisode(ep);
         setChannelDates((d) => ({ ...d, 'daily-wrap': ep.dateKey }));
-        audioService.load(ep);
+        // Only prime the player on a cold start. If something is already loaded
+        // (e.g. the user is mid-episode and just navigated back here), leave it
+        // alone so playback continues uninterrupted.
+        if (!audioService.currentEpisode) audioService.load(ep);
       })
       .catch((err: Error) => {
         if (cancelled) return;
@@ -65,14 +68,14 @@ export function HomeScreen({ onOpenPlayer, onOpenProfile }: Props) {
     };
   }, []);
 
-  const handlePlayPress = async () => {
-    if (episode) {
-      // Re-load is a no-op when the same episode id is already loaded,
-      // but switches back to Daily Wrap if the user was just in a channel player.
+  // Play button on the hero toggles play/pause for the Daily Wrap without
+  // navigating. Loads Daily Wrap first if a different channel was loaded.
+  const handleTogglePlay = async () => {
+    if (!episode) return;
+    if (audioService.currentEpisode?.id !== episode.id) {
       await audioService.load(episode);
-      await audioService.play();
     }
-    onOpenPlayer('daily-wrap');
+    await audioService.toggle();
   };
 
   const retry = () => {
@@ -89,6 +92,7 @@ export function HomeScreen({ onOpenPlayer, onOpenProfile }: Props) {
 
   const heroPositionSec = heroProgress.positionSeconds;
   const heroDurationSec = heroProgress.durationSeconds || (episode?.duration ?? 0);
+  const heroIsPlaying = player.isPlaying && player.episode?.id === episode?.id;
 
   return (
     <ScreenBackground>
@@ -112,7 +116,9 @@ export function HomeScreen({ onOpenPlayer, onOpenProfile }: Props) {
               positionSec={heroPositionSec}
               durationSec={heroDurationSec}
               complete={heroProgress.complete}
-              onPressPlay={handlePlayPress}
+              isPlaying={heroIsPlaying}
+              onPressCard={() => onOpenPlayer('daily-wrap')}
+              onPressPlay={handleTogglePlay}
             />
           ) : error ? (
             <View style={styles.statusCard}>

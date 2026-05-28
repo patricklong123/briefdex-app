@@ -12,6 +12,10 @@ interface Props {
   positionSec: number;
   durationSec: number;
   complete: boolean;
+  isPlaying: boolean;
+  /** Tapping anywhere on the card opens the full-screen player. */
+  onPressCard: () => void;
+  /** Tapping the play button toggles play/pause without navigating. */
   onPressPlay: () => void;
 }
 
@@ -21,23 +25,36 @@ function fmt(s: number) {
   return `${m}:${sec.toString().padStart(2, '0')}`;
 }
 
-export function HeroCard({ episode, positionSec, durationSec, complete, onPressPlay }: Props) {
+export function HeroCard({
+  episode,
+  positionSec,
+  durationSec,
+  complete,
+  isPlaying,
+  onPressCard,
+  onPressPlay,
+}: Props) {
   const totalSec = durationSec || episode.duration;
   const rawProgress = totalSec ? positionSec / totalSec : 0;
   const progress = complete ? 1 : Math.min(1, rawProgress);
   const hasProgress = !complete && positionSec > 0;
   const durationLabel = `${Math.max(1, Math.round(episode.duration / 60))} min`;
   let actionLabel: string;
-  if (complete) actionLabel = 'Listen again';
+  if (isPlaying) actionLabel = 'Playing now';
+  else if (complete) actionLabel = 'Listen again';
   else if (hasProgress) actionLabel = 'Continue listening';
   else actionLabel = "Play today's briefing";
+  const handleCard = () => {
+    Haptics.selectionAsync().catch(() => {});
+    onPressCard();
+  };
   const handlePlay = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
     onPressPlay();
   };
 
   return (
-    <View style={[styles.shadow, shadows.card]}>
+    <Pressable onPress={handleCard} style={[styles.shadow, shadows.card]}>
       <LinearGradient
         colors={[colors.g800, colors.g700, colors.g850]}
         start={{ x: 0, y: 0 }}
@@ -80,11 +97,18 @@ export function HeroCard({ episode, positionSec, durationSec, complete, onPressP
         {/* Action row */}
         <View style={styles.actionRow}>
           <Pressable onPress={handlePlay} style={({ pressed }) => [styles.playBtn, pressed && { transform: [{ scale: 0.96 }] }]}>
-            <View style={styles.playTriangle} />
+            {isPlaying ? (
+              <View style={styles.pauseRow}>
+                <View style={styles.pauseBar} />
+                <View style={styles.pauseBar} />
+              </View>
+            ) : (
+              <View style={styles.playTriangle} />
+            )}
           </Pressable>
           <View style={{ flex: 1 }}>
             <Text style={styles.continueLabel}>{actionLabel}</Text>
-            <Text style={styles.ticker}>{episode.tickerData}</Text>
+            <Text style={styles.ticker}>NZX · RBNZ · Global Markets</Text>
           </View>
         </View>
 
@@ -109,7 +133,7 @@ export function HeroCard({ episode, positionSec, durationSec, complete, onPressP
           </Text>
         </View>
       </LinearGradient>
-    </View>
+    </Pressable>
   );
 }
 
@@ -202,6 +226,16 @@ const styles = StyleSheet.create({
     borderTopColor: 'transparent',
     borderBottomColor: 'transparent',
     marginLeft: 4,
+  },
+  pauseRow: {
+    flexDirection: 'row',
+    gap: 5,
+  },
+  pauseBar: {
+    width: 5,
+    height: 18,
+    borderRadius: 1.5,
+    backgroundColor: '#1a1407',
   },
   continueLabel: {
     fontFamily: fonts.bodySemiBold,

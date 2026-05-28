@@ -148,7 +148,7 @@ export function ProfileScreen({
             <MenuItem
               icon={<GearIcon />}
               label="Settings"
-              subtitle="Playback settings"
+              subtitle="Playback, voice, privacy"
               onPress={onOpenSettings}
             />
           </View>

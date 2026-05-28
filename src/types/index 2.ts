@@ -19,6 +19,7 @@ export interface Episode {
   duration: number; // seconds
   channel: string;
   audioUrl: string;
+  tickerData?: string;
 }
 
 export interface UserProfile {

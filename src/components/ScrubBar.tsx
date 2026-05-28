@@ -1,6 +1,13 @@
-import React, { useRef, useState } from 'react';
-import { LayoutChangeEvent, PanResponder, StyleSheet, View, ViewStyle } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { LayoutChangeEvent, StyleSheet, View, ViewStyle } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import Animated, {
+  runOnJS,
+  useAnimatedStyle,
+  useDerivedValue,
+  useSharedValue,
+} from 'react-native-reanimated';
 import { colors } from '../theme/tokens';
 
 interface Props {
@@ -8,7 +15,7 @@ interface Props {
   progress: number;
   /** Fires continuously while the user drags, with the new 0..1 ratio. */
   onScrub?: (ratio: number) => void;
-  /** Fires when the user releases (or the gesture is terminated). */
+  /** Fires once when the user releases — the only place audio should seek. */
   onScrubComplete?: (ratio: number) => void;
   /** Disable interaction (still renders as a static progress bar). */
   disabled?: boolean;
@@ -19,6 +26,10 @@ interface Props {
   /** Secondary fill color used as the gradient highlight + thumb fill. */
   colorLight?: string;
   style?: ViewStyle;
+}
+
+function clamp01(v: number): number {
+  return Math.max(0, Math.min(1, v));
 }
 
 export function ScrubBar({
@@ -32,104 +43,98 @@ export function ScrubBar({
   colorLight = colors.goldLight,
   style,
 }: Props) {
-  const [isDragging, setIsDragging] = useState(false);
-  const [dragRatio, setDragRatio] = useState(0);
-  const widthRef = useRef(0);
-  const pageXRef = useRef(0);
-  const dragRatioRef = useRef(0);
-  const containerRef = useRef<View>(null);
+  // Pixel width of the track is kept both in React state (so the fixed-width
+  // gradient can size itself) and in a shared value (so the gesture worklet can
+  // convert a touch X into a 0..1 ratio on the UI thread).
+  const [trackW, setTrackW] = useState(0);
+  const trackWidth = useSharedValue(0);
+  const dragRatio = useSharedValue(0);
+  const dragging = useSharedValue(false);
+  const externalProgress = useSharedValue(clamp01(progress));
 
-  const measure = () => {
-    containerRef.current?.measureInWindow((x, _y, w) => {
-      pageXRef.current = x;
-      widthRef.current = w;
+  // Mirror the incoming progress prop into a shared value, but never while the
+  // user is dragging (their finger owns the position then).
+  useEffect(() => {
+    if (!dragging.value) externalProgress.value = clamp01(progress);
+  }, [progress, dragging, externalProgress]);
+
+  const displayRatio = useDerivedValue(() =>
+    dragging.value ? dragRatio.value : externalProgress.value,
+  );
+
+  const pan = Gesture.Pan()
+    .enabled(!disabled)
+    .minDistance(0)
+    .onBegin((e) => {
+      dragging.value = true;
+      const r = trackWidth.value > 0 ? clamp01(e.x / trackWidth.value) : 0;
+      dragRatio.value = r;
+      if (onScrub) runOnJS(onScrub)(r);
+    })
+    .onUpdate((e) => {
+      const r = trackWidth.value > 0 ? clamp01(e.x / trackWidth.value) : 0;
+      dragRatio.value = r;
+      if (onScrub) runOnJS(onScrub)(r);
+    })
+    .onEnd((e) => {
+      const r = trackWidth.value > 0 ? clamp01(e.x / trackWidth.value) : 0;
+      dragRatio.value = r;
+      // Hold the released position so the bar doesn't snap back to the stale
+      // `progress` prop in the frame before the audio service reports the seek.
+      externalProgress.value = r;
+      if (onScrubComplete) runOnJS(onScrubComplete)(r);
+    })
+    .onFinalize(() => {
+      dragging.value = false;
     });
-  };
+
+  const fillStyle = useAnimatedStyle(() => ({
+    width: displayRatio.value * trackWidth.value,
+  }));
+
+  const thumbStyle = useAnimatedStyle(() => {
+    const size = dragging.value ? 18 : Math.max(height + 5, 10);
+    return {
+      width: size,
+      height: size,
+      borderRadius: size / 2,
+      marginLeft: -size / 2,
+      top: (height - size) / 2,
+      left: displayRatio.value * trackWidth.value,
+      shadowOpacity: dragging.value ? 1 : 0.9,
+      shadowRadius: dragging.value ? 10 : 6,
+    };
+  });
 
   const handleLayout = (e: LayoutChangeEvent) => {
-    widthRef.current = e.nativeEvent.layout.width;
-    measure();
+    const w = e.nativeEvent.layout.width;
+    trackWidth.value = w;
+    setTrackW(w);
   };
-
-  const ratioFromPageX = (pageX: number) => {
-    const w = widthRef.current;
-    if (w <= 0) return 0;
-    return Math.max(0, Math.min(1, (pageX - pageXRef.current) / w));
-  };
-
-  const panResponder = useRef(
-    PanResponder.create({
-      onStartShouldSetPanResponder: () => !disabled,
-      onMoveShouldSetPanResponder: () => !disabled,
-      onPanResponderTerminationRequest: () => false,
-      onPanResponderGrant: (evt) => {
-        measure();
-        setIsDragging(true);
-        const r = ratioFromPageX(evt.nativeEvent.pageX);
-        dragRatioRef.current = r;
-        setDragRatio(r);
-        onScrub?.(r);
-      },
-      onPanResponderMove: (_evt, gesture) => {
-        const r = ratioFromPageX(gesture.moveX);
-        dragRatioRef.current = r;
-        setDragRatio(r);
-        onScrub?.(r);
-      },
-      onPanResponderRelease: () => {
-        setIsDragging(false);
-        onScrubComplete?.(dragRatioRef.current);
-      },
-      onPanResponderTerminate: () => {
-        setIsDragging(false);
-        onScrubComplete?.(dragRatioRef.current);
-      },
-    }),
-  ).current;
-
-  const displayRatio = isDragging ? dragRatio : Math.max(0, Math.min(1, progress));
-  const pct = `${displayRatio * 100}%` as const;
-  const thumbSize = isDragging ? 18 : Math.max(height + 5, 10);
 
   return (
-    <View
-      ref={containerRef}
-      onLayout={handleLayout}
-      style={[styles.hitArea, style]}
-      {...panResponder.panHandlers}
-    >
-      <View
-        style={[
-          styles.track,
-          { height, backgroundColor: trackColor, borderRadius: height / 2 },
-        ]}
-      >
-        <LinearGradient
-          colors={[color, colorLight]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 0 }}
-          style={[styles.fill, { width: pct, height, borderRadius: height / 2 }]}
-        />
+    <GestureDetector gesture={pan}>
+      <View onLayout={handleLayout} style={[styles.hitArea, style]}>
         <View
-          pointerEvents="none"
-          style={[
-            styles.thumb,
-            {
-              left: pct,
-              width: thumbSize,
-              height: thumbSize,
-              borderRadius: thumbSize / 2,
-              marginLeft: -thumbSize / 2,
-              top: (height - thumbSize) / 2,
-              backgroundColor: colorLight,
-              shadowColor: color,
-              shadowOpacity: isDragging ? 1 : 0.9,
-              shadowRadius: isDragging ? 10 : 6,
-            },
-          ]}
-        />
+          style={[styles.track, { height, backgroundColor: trackColor, borderRadius: height / 2 }]}
+        >
+          <Animated.View
+            style={[styles.fillClip, { height, borderRadius: height / 2 }, fillStyle]}
+          >
+            <LinearGradient
+              colors={[color, colorLight]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={{ width: trackW, height }}
+            />
+          </Animated.View>
+          <Animated.View
+            pointerEvents="none"
+            style={[styles.thumb, { backgroundColor: colorLight, shadowColor: color }, thumbStyle]}
+          />
+        </View>
       </View>
-    </View>
+    </GestureDetector>
   );
 }
 
@@ -144,15 +149,14 @@ const styles = StyleSheet.create({
     overflow: 'visible',
     position: 'relative',
   },
-  fill: {
+  fillClip: {
     position: 'absolute',
     left: 0,
     top: 0,
+    overflow: 'hidden',
   },
   thumb: {
     position: 'absolute',
-    backgroundColor: colors.goldLight,
-    shadowColor: colors.gold,
     shadowOffset: { width: 0, height: 0 },
     elevation: 6,
   },

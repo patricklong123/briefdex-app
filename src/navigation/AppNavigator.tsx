@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Modal, View } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useApp } from '../contexts/AppContext';
 import { OnboardingNavigator } from '../screens/onboarding/OnboardingNavigator';
 import { LoginScreen } from '../screens/LoginScreen';
@@ -107,11 +108,15 @@ export function AppNavigator() {
 
       <Modal
         visible={playerOpen}
-        animationType="slide"
-        presentationStyle="pageSheet"
+        transparent
+        animationType="none"
         onRequestClose={() => setPlayerOpen(false)}
       >
-        <PlayerScreen channelKey={playerChannel} onClose={() => setPlayerOpen(false)} />
+        {/* A Modal renders in its own native root, so the app-level
+            GestureHandlerRootView does not reach it — the player needs its own. */}
+        <GestureHandlerRootView style={{ flex: 1 }}>
+          <PlayerScreen channelKey={playerChannel} onClose={() => setPlayerOpen(false)} />
+        </GestureHandlerRootView>
       </Modal>
     </View>
   );
