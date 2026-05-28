@@ -20,7 +20,6 @@ import {
   ChannelKey,
   colors,
   fonts,
-  nextChannelInSequence,
   radii,
   spacing,
 } from '../theme/tokens';
@@ -54,10 +53,15 @@ function formatRate(r: number): string {
 }
 
 export function PlayerScreen({ onClose, channelKey = 'daily-wrap' }: Props) {
-  const [currentChannel, setCurrentChannel] = useState<ChannelKey>(channelKey);
-  const theme = CHANNEL_THEMES[currentChannel];
   const player = useAudioPlayer();
   const { prefs } = usePreferences();
+  // The channel the player UI currently presents (cover art, theme, title).
+  const [displayChannel, setDisplayChannel] = useState<ChannelKey>(channelKey);
+  const theme = CHANNEL_THEMES[displayChannel];
+  // Show the loading view up-front when the requested channel isn't already staged.
+  const [isFetching, setIsFetching] = useState(
+    audioService.currentEpisode?.channel !== CHANNEL_THEMES[channelKey].apiChannel,
+  );
   const [scrubRatio, setScrubRatio] = useState<number | null>(null);
   const [fetchError, setFetchError] = useState<string | null>(null);
 
@@ -107,29 +111,21 @@ export function PlayerScreen({ onClose, channelKey = 'daily-wrap' }: Props) {
     opacity: interpolate(translateY.value, [0, SCREEN_HEIGHT], [0.55, 0], Extrapolation.CLAMP),
   }));
 
-  // If the modal re-opens with a different channel without unmounting, follow the prop.
+  // Explicit open: present the requested channel and, if it isn't already the
+  // staged episode, fetch the latest and start it. Keyed on `channelKey`, so it
+  // only runs when the user opens the player for a channel — never on
+  // auto-advance (which the audio service drives independently).
   useEffect(() => {
-    setCurrentChannel(channelKey);
-  }, [channelKey]);
-
-  const loadedChannel = player.episode?.channel;
-  const channelAlreadyLoaded = loadedChannel === theme.apiChannel;
-
-  // When reopening the player on the same channel (e.g. via the bottom-nav
-  // "Now Playing" pill), keep the existing playback state. Otherwise fetch
-  // the latest episode for this channel and start it.
-  const needsFetch = !channelAlreadyLoaded;
-  const [isFetching, setIsFetching] = useState(needsFetch);
-
-  useEffect(() => {
-    if (!needsFetch) {
+    setDisplayChannel(channelKey);
+    const apiChannel = CHANNEL_THEMES[channelKey].apiChannel;
+    if (audioService.currentEpisode?.channel === apiChannel) {
       setIsFetching(false);
       return;
     }
     let cancelled = false;
     setIsFetching(true);
     setFetchError(null);
-    fetchLatestEpisode(theme.apiChannel)
+    fetchLatestEpisode(apiChannel)
       .then(async (ep) => {
         if (cancelled) return;
         await audioService.load(ep);
@@ -145,19 +141,16 @@ export function PlayerScreen({ onClose, channelKey = 'daily-wrap' }: Props) {
     return () => {
       cancelled = true;
     };
-  }, [needsFetch, theme.apiChannel]);
+  }, [channelKey]);
 
-  // Auto-advance to the next channel when the current episode finishes,
-  // if the preference is enabled and there is a next channel in the sequence.
+  // Follow playback: when the service auto-advances to the next channel, the
+  // loaded episode's channel changes — mirror it in the UI (cover, theme,
+  // title). Skipped while an explicit-open fetch is in flight.
   useEffect(() => {
-    if (!prefs.autoplayNextChannel) return;
-    return audioService.onFinish(() => {
-      const next = nextChannelInSequence(currentChannel);
-      if (!next) return;
-      setIsFetching(true);
-      setCurrentChannel(next);
-    });
-  }, [prefs.autoplayNextChannel, currentChannel]);
+    const ch = player.episode?.channel as ChannelKey | undefined;
+    if (!ch || isFetching) return;
+    setDisplayChannel(ch);
+  }, [player.episode?.channel, isFetching]);
 
   const episode = player.episode;
   const loading = isFetching || !episode;

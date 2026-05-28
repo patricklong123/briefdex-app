@@ -6,9 +6,11 @@ import TrackPlayer, {
 } from 'react-native-track-player';
 import { Episode, PlaybackRate } from '../types';
 import { CHANNELS } from '../data/placeholders';
+import { ChannelKey, nextChannelInSequence } from '../theme/tokens';
 import { storage } from './storageService';
 import { progressService } from './progressService';
 import { preferencesService } from './preferencesService';
+import { fetchLatestEpisode } from './episodeService';
 
 const PROGRESS_SAVE_INTERVAL_SEC = 5;
 
@@ -49,6 +51,7 @@ class AudioService {
   private lastProgressSavePosSec = Number.NEGATIVE_INFINITY;
   private defaultRate: PlaybackRate = 1.0;
   private skipIntervalSec = 15;
+  private autoplayNext = false;
   // True when the loaded episode has no real audio URL — we then simulate
   // progress with a timer so the UI demos without a backend (no lock-screen).
   private mockMode = false;
@@ -58,6 +61,7 @@ class AudioService {
     preferencesService.subscribe((p) => {
       this.defaultRate = p.playbackSpeed as PlaybackRate;
       this.skipIntervalSec = p.skipInterval;
+      this.autoplayNext = p.autoplayNextChannel;
       // Keep the lock-screen skip buttons in step with the user's preference.
       if (this.initPromise) {
         TrackPlayer.updateOptions({
@@ -129,6 +133,7 @@ class AudioService {
       progressService.markComplete(finished.channel, finished.dateKey);
       this.emit();
       this.emitFinish(finished);
+      void this.maybeAutoAdvance(finished);
     });
   }
 
@@ -145,6 +150,24 @@ class AudioService {
 
   private emitFinish(episode: Episode) {
     this.finishListeners.forEach((l) => l(episode));
+  }
+
+  /**
+   * When an episode finishes and "Auto-play next channel" is on, fetch and play
+   * the next channel in CHANNEL_SEQUENCE. Stops at the last channel
+   * (Macro & RBNZ) — never loops back to the start.
+   */
+  private async maybeAutoAdvance(finished: Episode) {
+    if (!this.autoplayNext) return;
+    const next = nextChannelInSequence(finished.channel as ChannelKey);
+    if (!next) return; // last in the sequence — stop playback, do not loop.
+    try {
+      const ep = await fetchLatestEpisode(next);
+      await this.load(ep);
+      await this.play();
+    } catch {
+      // Couldn't fetch/stage the next episode — stop gracefully.
+    }
   }
 
   private emit() {
@@ -318,6 +341,7 @@ class AudioService {
           progressService.markComplete(finishedEpisode.channel, finishedEpisode.dateKey);
           this.emit();
           this.emitFinish(finishedEpisode);
+          void this.maybeAutoAdvance(finishedEpisode);
           return;
         }
         this.maybeSaveProgress();

@@ -17,7 +17,7 @@ export interface Preferences {
 export const DEFAULT_PREFERENCES: Preferences = {
   playbackSpeed: 1.0,
   skipInterval: 15,
-  autoplayNextChannel: false,
+  autoplayNextChannel: true,
 };
 
 type Listener = (prefs: Preferences) => void;

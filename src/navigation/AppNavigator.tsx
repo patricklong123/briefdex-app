@@ -14,6 +14,7 @@ import { SubscriptionScreen } from '../screens/SubscriptionScreen';
 import { AnnualPlanScreen } from '../screens/AnnualPlanScreen';
 import { SettingsScreen } from '../screens/SettingsScreen';
 import { ChannelKey, colors } from '../theme/tokens';
+import { audioService } from '../services/audioService';
 
 type Tab = 'home' | 'profile' | 'notifications' | 'subscription' | 'annual' | 'settings';
 
@@ -33,7 +34,11 @@ export function AppNavigator() {
   const [playerChannel, setPlayerChannel] = useState<ChannelKey>('daily-wrap');
 
   const openPlayer = (channel?: ChannelKey) => {
-    if (channel) setPlayerChannel(channel);
+    // No explicit channel (e.g. the "Now Playing" pill): open to whatever is
+    // currently playing so we never interrupt auto-advanced playback by
+    // re-fetching a stale channel.
+    const target = channel ?? (audioService.currentEpisode?.channel as ChannelKey | undefined);
+    if (target) setPlayerChannel(target);
     setPlayerOpen(true);
   };
 
