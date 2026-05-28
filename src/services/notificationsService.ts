@@ -5,12 +5,12 @@ import * as Notifications from 'expo-notifications';
 const STORAGE_KEY = '@briefdex/notifications';
 
 const DAILY_BRIEFING_CONTENT = {
-  title: "Today's briefing is ready",
-  body: 'Your Briefdex Daily Wrap is waiting — markets before your first coffee.',
+  title: '📈 Markets open in 2 hours.',
+  body: 'Your morning briefing is ready.',
 };
 const LISTENING_REMINDER_CONTENT = {
-  title: 'Haven’t listened yet?',
-  body: 'Your daily brief is ready whenever you are.',
+  title: "⏰ Don't start the day behind.",
+  body: 'Your Briefdex briefing is waiting.',
 };
 
 export interface TimeOfDay {
