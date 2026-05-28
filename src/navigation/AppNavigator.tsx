@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Modal, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { useApp } from '../contexts/AppContext';
 import { OnboardingNavigator } from '../screens/onboarding/OnboardingNavigator';
 import { LoginScreen } from '../screens/LoginScreen';
@@ -113,9 +114,13 @@ export function AppNavigator() {
         onRequestClose={() => setPlayerOpen(false)}
       >
         {/* A Modal renders in its own native root, so the app-level
-            GestureHandlerRootView does not reach it — the player needs its own. */}
+            GestureHandlerRootView and SafeAreaProvider do not reach it — the
+            player needs its own, otherwise SafeAreaView gets zero insets and
+            the header renders under the notch / Dynamic Island. */}
         <GestureHandlerRootView style={{ flex: 1 }}>
-          <PlayerScreen channelKey={playerChannel} onClose={() => setPlayerOpen(false)} />
+          <SafeAreaProvider>
+            <PlayerScreen channelKey={playerChannel} onClose={() => setPlayerOpen(false)} />
+          </SafeAreaProvider>
         </GestureHandlerRootView>
       </Modal>
     </View>

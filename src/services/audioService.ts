@@ -23,6 +23,10 @@ function channelDisplay(apiChannel: string): string {
   return CHANNEL_DISPLAY[apiChannel] ?? 'Briefdex';
 }
 
+// Briefdex logo shown as album art on the lock screen / Control Center for
+// every episode. Requires a 1024x1024 PNG at assets/icon.png.
+const ARTWORK = require('../../assets/icon.png');
+
 type Listener = (state: {
   episode: Episode | null;
   isPlaying: boolean;
@@ -195,6 +199,7 @@ class AudioService {
         title: episode.title,
         artist: channelDisplay(episode.channel),
         album: 'Briefdex',
+        artwork: ARTWORK,
         duration: episode.duration,
       });
       if (this.positionSec > 0) await TrackPlayer.seekTo(this.positionSec);
@@ -229,11 +234,21 @@ class AudioService {
   }
 
   async seekTo(positionSec: number) {
-    const clamped = Math.max(0, Math.min(this.durationSec, positionSec));
+    const clamped = Math.max(0, Math.min(this.durationSec || 0, positionSec));
     this.positionSec = clamped;
     this.emit();
-    if (!this.mockMode) await TrackPlayer.seekTo(clamped);
     if (this.episode) storage.setPlaybackPosition(this.episode.id, clamped);
+    if (this.mockMode) return;
+    try {
+      // Only seek once a track is actually staged & ready. Calling seekTo with
+      // no active track (e.g. mid-load, or right after a tap before the queue
+      // is populated) rejects natively and was crashing the app.
+      const active = await TrackPlayer.getActiveTrack();
+      if (!active) return;
+      await TrackPlayer.seekTo(clamped);
+    } catch {
+      // Transient native error / track not ready — ignore rather than crash.
+    }
   }
 
   async skipForward(seconds?: number) {
