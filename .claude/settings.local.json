@@ -42,7 +42,11 @@
       "Bash(eas env:list --environment production)",
       "Bash(echo \"tsc exit: $?\")",
       "Bash(node -e \"const p=require\\('react-native-track-player/package.json'\\); console.log\\(JSON.stringify\\(p.peerDependencies||{},null,1\\)\\)\")",
-      "Bash(node -e \"const p=require\\('react-native-track-player/package.json'\\); console.log\\('types:',p.types||p.typings\\); console.log\\('main:',p.main\\)\")"
+      "Bash(node -e \"const p=require\\('react-native-track-player/package.json'\\); console.log\\('types:',p.types||p.typings\\); console.log\\('main:',p.main\\)\")",
+      "Bash(sips -g pixelWidth -g pixelHeight assets/icon.png)",
+      "Bash(git config *)",
+      "Bash(git rebase *)",
+      "Bash(npx eas-cli *)"
     ]
   }
 }
