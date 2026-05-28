@@ -56,6 +56,14 @@ class AudioService {
   // progress with a timer so the UI demos without a backend (no lock-screen).
   private mockMode = false;
   private mockTimer: ReturnType<typeof setInterval> | null = null;
+  // Debounced native seek: the scrubber/skip update positionSec immediately but
+  // the actual TrackPlayer.seekTo is coalesced so rapid scrubbing fires once.
+  private seekTimer: ReturnType<typeof setTimeout> | null = null;
+  private pendingSeekSec: number | null = null;
+  // A resume position to apply once the freshly-loaded track is ready. Seeking
+  // straight after add() (before the item loads) can crash natively, so we wait.
+  private pendingResumeSec: number | null = null;
+  private readonly SEEK_DEBOUNCE_MS = 300;
 
   constructor() {
     preferencesService.subscribe((p) => {
@@ -111,6 +119,15 @@ class AudioService {
     TrackPlayer.addEventListener(Event.PlaybackState, (e) => {
       if (this.mockMode) return;
       this.isPlaying = e.state === State.Playing;
+      // Once the freshly-loaded item is ready, apply any deferred resume seek.
+      if (
+        this.pendingResumeSec != null &&
+        (e.state === State.Ready || e.state === State.Playing)
+      ) {
+        const target = this.pendingResumeSec;
+        this.pendingResumeSec = null;
+        void this.performNativeSeek(target);
+      }
       this.emit();
     });
 
@@ -165,8 +182,9 @@ class AudioService {
       const ep = await fetchLatestEpisode(next);
       await this.load(ep);
       await this.play();
-    } catch {
-      // Couldn't fetch/stage the next episode — stop gracefully.
+    } catch (e) {
+      // Couldn't fetch/stage the next episode — stop gracefully but surface why.
+      console.warn(`[audioService] auto-advance to "${next}" failed:`, e);
     }
   }
 
@@ -197,18 +215,23 @@ class AudioService {
     if (this.episode?.id === episode.id) return;
 
     this.stopMockTimer();
+    this.cancelPendingSeek();
     this.episode = episode;
     this.positionSec = await storage.getPlaybackPosition(episode.id);
     this.durationSec = episode.duration;
     this.rate = this.defaultRate;
     this.lastProgressSavePosSec = Number.NEGATIVE_INFINITY;
     this.isPlaying = false;
+    // Resume from the saved position, but only once the track is ready (applied
+    // in the PlaybackState handler) — seeking right after add() can crash.
+    this.pendingResumeSec = this.positionSec > 1 ? this.positionSec : null;
     this.emit();
 
     if (!episode.audioUrl) {
       // No real audio — mock mode. Clear any queued track so the lock screen
       // doesn't show stale Now Playing info from a previous episode.
       this.mockMode = true;
+      this.pendingResumeSec = null;
       await TrackPlayer.reset().catch(() => {});
       return;
     }
@@ -225,11 +248,11 @@ class AudioService {
         artwork: ARTWORK,
         duration: episode.duration,
       });
-      if (this.positionSec > 0) await TrackPlayer.seekTo(this.positionSec);
       await TrackPlayer.setRate(this.rate);
     } catch {
       // Couldn't stage the track — fall back to mock playback so the UI still works.
       this.mockMode = true;
+      this.pendingResumeSec = null;
     }
   }
 
@@ -257,21 +280,47 @@ class AudioService {
   }
 
   async seekTo(positionSec: number) {
-    const clamped = Math.max(0, Math.min(this.durationSec || 0, positionSec));
+    // Never let a non-finite value reach the UI or the native player — NaN/∞
+    // (e.g. a ratio computed against a zero/unknown duration) crashes seekTo.
+    let clamped = Math.max(0, Math.min(this.durationSec || 0, positionSec));
+    if (!Number.isFinite(clamped)) clamped = 0;
     this.positionSec = clamped;
     this.emit();
     if (this.episode) storage.setPlaybackPosition(this.episode.id, clamped);
     if (this.mockMode) return;
+
+    // Debounce the native seek so rapid scrubbing / repeated skips coalesce into
+    // a single TrackPlayer.seekTo on the final position.
+    this.pendingSeekSec = clamped;
+    if (this.seekTimer) clearTimeout(this.seekTimer);
+    this.seekTimer = setTimeout(() => {
+      this.seekTimer = null;
+      const target = this.pendingSeekSec;
+      this.pendingSeekSec = null;
+      if (target != null) void this.performNativeSeek(target);
+    }, this.SEEK_DEBOUNCE_MS);
+  }
+
+  /** Perform the native seek, guarded so it can never crash the app. */
+  private async performNativeSeek(positionSec: number) {
+    if (!Number.isFinite(positionSec) || positionSec < 0) return;
     try {
-      // Only seek once a track is actually staged & ready. Calling seekTo with
-      // no active track (e.g. mid-load, or right after a tap before the queue
-      // is populated) rejects natively and was crashing the app.
       const active = await TrackPlayer.getActiveTrack();
-      if (!active) return;
-      await TrackPlayer.seekTo(clamped);
+      if (!active) return; // nothing staged — nothing to seek
+      const { duration } = await TrackPlayer.getProgress();
+      if (!duration || duration <= 0) return; // item not ready — seeking now can crash
+      await TrackPlayer.seekTo(Math.min(positionSec, duration));
     } catch {
       // Transient native error / track not ready — ignore rather than crash.
     }
+  }
+
+  private cancelPendingSeek() {
+    if (this.seekTimer) {
+      clearTimeout(this.seekTimer);
+      this.seekTimer = null;
+    }
+    this.pendingSeekSec = null;
   }
 
   async skipForward(seconds?: number) {
@@ -297,6 +346,8 @@ class AudioService {
 
   async unload() {
     this.stopMockTimer();
+    this.cancelPendingSeek();
+    this.pendingResumeSec = null;
     if (!this.mockMode) await TrackPlayer.reset().catch(() => {});
     this.isPlaying = false;
     this.episode = null;
