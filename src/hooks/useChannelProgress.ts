@@ -1,11 +1,8 @@
 import { useEffect, useState } from 'react';
+import { useProgress } from 'react-native-track-player';
 import { audioService } from '../services/audioService';
 import { EMPTY_PROGRESS, ProgressEntry, progressService } from '../services/progressService';
-
-interface LiveSnapshot {
-  positionSec: number;
-  durationSec: number;
-}
+import { Episode } from '../types';
 
 export function useChannelProgress(
   channel: string | undefined,
@@ -15,7 +12,16 @@ export function useChannelProgress(
     if (!channel || !date) return EMPTY_PROGRESS;
     return progressService.getCached(channel, date) ?? EMPTY_PROGRESS;
   });
-  const [live, setLive] = useState<LiveSnapshot | null>(null);
+  const [loadedEpisode, setLoadedEpisode] = useState<Episode | null>(
+    audioService.currentEpisode,
+  );
+  const [mockSnapshot, setMockSnapshot] = useState<{
+    positionSec: number;
+    durationSec: number;
+  } | null>(null);
+  // Polls TrackPlayer for live playback position. Returns 0/0 when nothing is
+  // loaded (e.g. mock-mode episodes with no audioUrl).
+  const { position, duration } = useProgress(1000);
 
   useEffect(() => {
     if (!channel || !date) {
@@ -35,31 +41,35 @@ export function useChannelProgress(
     };
   }, [channel, date]);
 
-  // While audioService is playing the matching episode it emits ~once per
-  // second; mirror that into local state so the bar can update between the
-  // 5-second progressService saves.
+  // Keep the currently-loaded episode (and mock-mode position) in sync so we
+  // know when the live progress reading applies to *this* channel/date.
   useEffect(() => {
-    if (!channel || !date) {
-      setLive(null);
-      return;
-    }
-    const unsub = audioService.subscribe((s) => {
-      if (s.episode?.channel === channel && s.episode.dateKey === date) {
-        setLive({ positionSec: s.positionSec, durationSec: s.durationSec });
+    return audioService.subscribe((s) => {
+      setLoadedEpisode(s.episode);
+      if (s.episode && !s.episode.audioUrl) {
+        setMockSnapshot({ positionSec: s.positionSec, durationSec: s.durationSec });
       } else {
-        setLive(null);
+        setMockSnapshot(null);
       }
     });
-    return unsub;
-  }, [channel, date]);
+  }, []);
 
-  if (live && !persisted.complete) {
-    const duration = live.durationSec || persisted.durationSeconds;
-    const percent = duration > 0 ? Math.min(1, live.positionSec / duration) : 0;
+  const isCurrent =
+    !!loadedEpisode &&
+    loadedEpisode.channel === channel &&
+    loadedEpisode.dateKey === date;
+
+  if (isCurrent && !persisted.complete) {
+    const hasAudio = !!loadedEpisode!.audioUrl;
+    const livePos = hasAudio ? position : mockSnapshot?.positionSec ?? 0;
+    const liveDur = hasAudio
+      ? duration || loadedEpisode!.duration || persisted.durationSeconds
+      : mockSnapshot?.durationSec || loadedEpisode!.duration || persisted.durationSeconds;
+    const pct = liveDur > 0 ? Math.min(1, livePos / liveDur) : 0;
     return {
-      positionSeconds: live.positionSec,
-      durationSeconds: duration,
-      percentComplete: percent,
+      positionSeconds: livePos,
+      durationSeconds: liveDur,
+      percentComplete: pct,
       complete: false,
       updatedAt: persisted.updatedAt,
     };
