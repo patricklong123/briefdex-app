@@ -136,13 +136,6 @@ export function PaywallScreen({ onStartTrial }: { onStartTrial: () => void }) {
             .
           </Text>
 
-          {/* HIDDEN FOR APP STORE SCREENSHOTS — uncomment before next dev session */}
-          {/* {__DEV__ && (
-            <Pressable onPress={onStartTrial} hitSlop={12}>
-              <Text style={styles.devSkip}>Skip for testing →</Text>
-            </Pressable>
-          )} */}
-
         </ScrollView>
       </SafeAreaView>
     </ScreenBackground>
@@ -320,15 +313,5 @@ const styles = StyleSheet.create({
     fontFamily: fonts.bodyMedium,
     color: colors.gold,
     textDecorationLine: 'underline',
-  },
-
-  // DEV ONLY - REMOVE BEFORE SUBMISSION
-  devSkip: {
-    fontFamily: fonts.bodySemiBold,
-    fontSize: 11,
-    color: colors.gold,
-    textAlign: 'center',
-    textDecorationLine: 'underline',
-    marginTop: spacing.sm,
   },
 });
