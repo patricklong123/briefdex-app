@@ -48,7 +48,21 @@
       "Bash(git rebase *)",
       "Bash(npx eas-cli *)",
       "Bash(curl -s -o /dev/null -w 'HTTP %{http_code}\\\\n' https://briefdex-api.onrender.com/api/episodes/latest?channel=__TRACKED_VAR__)",
-      "Bash(curl -s https://briefdex-api.onrender.com/api/episodes/latest?channel=__TRACKED_VAR__)"
+      "Bash(curl -s https://briefdex-api.onrender.com/api/episodes/latest?channel=__TRACKED_VAR__)",
+      "Bash(python3 -c \"from PIL import Image; print\\('PIL ok'\\)\")",
+      "Bash(python3 -m pip install --quiet --user Pillow)",
+      "Read(//private/tmp/**)",
+      "Bash(python3 -m venv pil-venv)",
+      "Bash(/tmp/pil-venv/bin/pip install *)",
+      "Bash(/tmp/pil-venv/bin/python -c \"from PIL import Image; print\\('PIL ok'\\)\")",
+      "Bash(/tmp/pil-venv/bin/python *)",
+      "Bash(eas secret:list)",
+      "Bash(eas env:list --environment preview)",
+      "Bash(eas env:list --environment development)",
+      "Bash(eas env:create --help)",
+      "Bash(eas env:create *)",
+      "Bash(eas env:list --environment production --non-interactive)",
+      "Bash(eas env:list --environment preview --non-interactive)"
     ]
   }
 }
