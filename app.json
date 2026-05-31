@@ -9,7 +9,7 @@
     "userInterfaceStyle": "dark",
     "splash": {
       "resizeMode": "contain",
-      "backgroundColor": "#0a1a10"
+      "backgroundColor": "#0A2D19"
     },
     "ios": {
       "supportsTablet": true,
@@ -23,7 +23,7 @@
     "android": {
       "package": "com.briefdex.app",
       "adaptiveIcon": {
-        "backgroundColor": "#0a1a10"
+        "backgroundColor": "#0A2D19"
       },
       "permissions": [
         "android.permission.MODIFY_AUDIO_SETTINGS",
